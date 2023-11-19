@@ -1,6 +1,8 @@
 import { mat4 } from "gl-matrix";
-import source from "./shaders/cube";
 import { ProgramSource } from "./types";
+
+import vertexShader from "./shaders/rotating-cube/vertex.glsl?raw";
+import fragmentShader from "./shaders/rotating-cube/fragment.glsl?raw";
 
 type ProgramInfo = {
   program: WebGLProgram;
@@ -19,7 +21,10 @@ type Buffers = {
 export function run(gl: WebGLRenderingContext): void {
   let cubeRotation = 0.0;
   let deltaTime = 0;
-  const shaderProgram = initShaderProgram(gl, source);
+  const shaderProgram = initShaderProgram(gl, {
+    vertex: vertexShader,
+    fragment: fragmentShader,
+  });
   const programInfo: ProgramInfo = {
     program: shaderProgram,
     uniformLocations: {
@@ -310,6 +315,12 @@ function compileShader(
 
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
+
+  const message = gl.getShaderInfoLog(shader);
+  if (message) {
+    console.log(source);
+    throw new Error(message);
+  }
 
   return shader;
 }
