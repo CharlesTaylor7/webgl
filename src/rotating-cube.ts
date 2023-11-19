@@ -4,52 +4,28 @@ import { ProgramSource } from "./types";
 import vertexShader from "./shaders/rotating-cube/vertex.glsl?raw";
 import fragmentShader from "./shaders/rotating-cube/fragment.glsl?raw";
 
-type ProgramInfo = {
-  program: WebGLProgram;
-  uniformLocations: {
-    projectionMatrix: WebGLUniformLocation;
-    modelViewMatrix: WebGLUniformLocation;
-  };
-};
-
-type Buffers = {
-  positions: WebGLBuffer;
-  colors: WebGLBuffer;
-  indices: WebGLBuffer;
-};
-
 export function run(gl: WebGLRenderingContext): void {
-  let cubeRotation = 0.0;
-  let deltaTime = 0;
   const shaderProgram = initShaderProgram(gl, {
     vertex: vertexShader,
     fragment: fragmentShader,
   });
-  const programInfo: ProgramInfo = {
-    program: shaderProgram,
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        shaderProgram,
-        "projectionMatrix",
-      )!,
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, "modelMatrix")!,
-    },
-  };
+  gl.uniformMatrix4fv(
+    gl.getUniformLocation(shaderProgram, "projectionMatrix"),
+    false,
+    getProjectionMatrix(gl.canvas as HTMLCanvasElement),
+  );
+  setPositionAttribute(gl, shaderProgram);
+  setColorAttribute(gl, shaderProgram);
 
-  const buffers = {
-    positions: initPositionBuffer(gl),
-    colors: initColorBuffer(gl),
-    indices: initIndexBuffer(gl),
-  };
-
+  let cubeRotation = 0.0;
+  let deltaTime = 0;
   let then = 0;
-
   function render(nowMillis: number) {
     const now = nowMillis * 0.001;
     deltaTime = now - then;
     then = now;
 
-    drawScene(gl, programInfo, buffers, cubeRotation, shaderProgram);
+    drawScene(gl, cubeRotation, shaderProgram);
     cubeRotation += deltaTime;
 
     requestAnimationFrame(render);
@@ -57,63 +33,56 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
-function drawScene(
-  gl: WebGLRenderingContext,
-  programInfo: ProgramInfo,
-  buffers: Buffers,
-  cubeRotation: number,
-  shaderProgram: WebGLProgram,
-) {
+function clearScene(gl: WebGLRenderingContext) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clearDepth(1.0);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
 
+function getProjectionMatrix(canvas: HTMLCanvasElement) {
   const fieldOfView = (45 * Math.PI) / 180;
-  const canvas = gl.canvas as HTMLCanvasElement;
   const aspect = canvas.clientWidth / canvas.clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
   const projectionMatrix = mat4.create();
-
   mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
+  return projectionMatrix;
+}
+
+function getModelViewMatrix(cubeRotation: number) {
   const modelViewMatrix = mat4.create();
-
   mat4.translate(modelViewMatrix, modelViewMatrix, [-0, 0, -6]);
-
   mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation, [0, 0, 1]);
   mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.7, [0, 1, 0]);
   mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.3, [1, 0, 0]);
+  return modelViewMatrix;
+}
 
-  setPositionAttribute(gl, buffers, shaderProgram);
-  setColorAttribute(gl, buffers, shaderProgram);
+function drawScene(
+  gl: WebGLRenderingContext,
+  cubeRotation: number,
+  shaderProgram: WebGLProgram,
+) {
+  clearScene(gl);
 
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-  gl.useProgram(programInfo.program);
-
-  // Set the shader uniforms
   gl.uniformMatrix4fv(
-    programInfo.uniformLocations.projectionMatrix,
+    gl.getUniformLocation(shaderProgram, "modelMatrix"),
     false,
-    projectionMatrix,
-  );
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.modelViewMatrix,
-    false,
-    modelViewMatrix,
+    getModelViewMatrix(cubeRotation),
   );
 
   const vertexCount = 36;
   const type = gl.UNSIGNED_SHORT;
   const offset = 0;
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, initIndexBuffer(gl));
   gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
 }
 
 function setPositionAttribute(
   gl: WebGLRenderingContext,
-  buffers: Buffers,
   shaderProgram: WebGLProgram,
 ) {
   const numComponents = 3;
@@ -123,7 +92,7 @@ function setPositionAttribute(
   const offset = 0;
 
   const vertexPosition = gl.getAttribLocation(shaderProgram, "position");
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.positions);
+  gl.bindBuffer(gl.ARRAY_BUFFER, initPositionBuffer(gl));
   gl.vertexAttribPointer(
     vertexPosition,
     numComponents,
@@ -137,7 +106,6 @@ function setPositionAttribute(
 
 function setColorAttribute(
   gl: WebGLRenderingContext,
-  buffers: Buffers,
   shaderProgram: WebGLProgram,
 ) {
   const numComponents = 4;
@@ -147,7 +115,7 @@ function setColorAttribute(
   const offset = 0;
 
   const vertexColor = gl.getAttribLocation(shaderProgram, "color");
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.colors);
+  gl.bindBuffer(gl.ARRAY_BUFFER, initColorBuffer(gl));
   gl.vertexAttribPointer(
     vertexColor,
     numComponents,
@@ -159,12 +127,48 @@ function setColorAttribute(
   gl.enableVertexAttribArray(vertexColor);
 }
 
-function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
-  // Create a buffer for the square's positions.
-  const positionBuffer = gl.createBuffer()!;
+export function initShaderProgram(
+  gl: WebGLRenderingContext,
+  source: ProgramSource,
+): WebGLProgram {
+  const vertexShader = compileShader(gl, gl.VERTEX_SHADER, source.vertex);
+  const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, source.fragment);
 
-  // Select the positionBuffer as the one to apply buffer
-  // operations to from here out.
+  const program = gl.createProgram()!;
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    const info = gl.getProgramInfoLog(program)!;
+    throw new Error(info);
+  }
+  gl.useProgram(program);
+
+  return program;
+}
+
+function compileShader(
+  gl: WebGLRenderingContext,
+  type: number,
+  source: string,
+): WebGLShader {
+  const shader = gl.createShader(type)!;
+
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+
+  const message = gl.getShaderInfoLog(shader);
+  if (message) {
+    console.log(source);
+    throw new Error(message);
+  }
+
+  return shader;
+}
+
+function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
+  const positionBuffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
   const positions = [
@@ -278,44 +282,4 @@ export function initIndexBuffer(gl: WebGLRenderingContext): WebGLBuffer {
   );
 
   return indexBuffer;
-}
-
-export function initShaderProgram(
-  gl: WebGLRenderingContext,
-  source: ProgramSource,
-): WebGLProgram {
-  const vertexShader = compileShader(gl, gl.VERTEX_SHADER, source.vertex);
-  const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, source.fragment);
-
-  const program = gl.createProgram()!;
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-
-  gl.linkProgram(program);
-
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const info = gl.getProgramInfoLog(program)!;
-    throw new Error(info);
-  }
-
-  return program;
-}
-
-function compileShader(
-  gl: WebGLRenderingContext,
-  type: number,
-  source: string,
-): WebGLShader {
-  const shader = gl.createShader(type)!;
-
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-
-  const message = gl.getShaderInfoLog(shader);
-  if (message) {
-    console.log(source);
-    throw new Error(message);
-  }
-
-  return shader;
 }
