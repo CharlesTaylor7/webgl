@@ -1,8 +1,9 @@
 import { mat4 } from "gl-matrix";
-import { ProgramSource } from "./types";
 
-import vertexShader from "./shaders/rotating-cube/vertex.glsl?raw";
-import fragmentShader from "./shaders/rotating-cube/fragment.glsl?raw";
+import { initShaderProgram } from "../utils";
+
+import vertexShader from "./vertex.glsl?raw";
+import fragmentShader from "./fragment.glsl?raw";
 
 export function run(gl: WebGLRenderingContext): void {
   const shaderProgram = initShaderProgram(gl, {
@@ -125,48 +126,6 @@ function setColorAttribute(
     offset,
   );
   gl.enableVertexAttribArray(vertexColor);
-}
-
-export function initShaderProgram(
-  gl: WebGLRenderingContext,
-  source: ProgramSource,
-): WebGLProgram {
-  const vertexShader = compileShader(gl, gl.VERTEX_SHADER, source.vertex);
-  const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, source.fragment);
-
-  const program = gl.createProgram()!;
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const info = gl.getProgramInfoLog(program)!;
-    gl.deleteProgram(program);
-    throw new Error(info);
-  }
-  gl.useProgram(program);
-
-  return program;
-}
-
-function compileShader(
-  gl: WebGLRenderingContext,
-  type: number,
-  source: string,
-): WebGLShader {
-  const shader = gl.createShader(type)!;
-
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-
-  const message = gl.getShaderInfoLog(shader);
-  if (message) {
-    console.log(source);
-    gl.deleteShader(shader);
-    throw new Error(message);
-  }
-
-  return shader;
 }
 
 function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
