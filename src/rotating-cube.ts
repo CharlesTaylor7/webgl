@@ -16,6 +16,7 @@ export function run(gl: WebGLRenderingContext): void {
   );
   setPositionAttribute(gl, shaderProgram);
   setColorAttribute(gl, shaderProgram);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, initIndexBuffer(gl));
 
   let cubeRotation = 0.0;
   let deltaTime = 0;
@@ -77,7 +78,6 @@ function drawScene(
   const vertexCount = 36;
   const type = gl.UNSIGNED_SHORT;
   const offset = 0;
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, initIndexBuffer(gl));
   gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
 }
 
@@ -141,6 +141,7 @@ export function initShaderProgram(
 
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     const info = gl.getProgramInfoLog(program)!;
+    gl.deleteProgram(program);
     throw new Error(info);
   }
   gl.useProgram(program);
@@ -161,6 +162,7 @@ function compileShader(
   const message = gl.getShaderInfoLog(shader);
   if (message) {
     console.log(source);
+    gl.deleteShader(shader);
     throw new Error(message);
   }
 
