@@ -17,7 +17,7 @@ export function run(gl: WebGLRenderingContext): void {
   );
   setPositionAttribute(gl, shaderProgram);
   setColorAttribute(gl, shaderProgram);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, initIndexBuffer(gl));
+  initIndexBuffer(gl);
 
   let cubeRotation = 0.0;
   let deltaTime = 0;
@@ -183,7 +183,7 @@ export function initColorBuffer(gl: WebGLRenderingContext): WebGLBuffer {
 }
 
 // prettier-ignore
-function initIndexBuffer(gl: WebGLRenderingContext): WebGLBuffer {
+function initIndexBuffer(gl: WebGLRenderingContext) {
   const indexBuffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
@@ -204,6 +204,4 @@ function initIndexBuffer(gl: WebGLRenderingContext): WebGLBuffer {
     new Uint16Array(indices),
     gl.STATIC_DRAW,
   );
-
-  return indexBuffer;
 }
