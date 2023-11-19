@@ -160,7 +160,7 @@ function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
   return positionBuffer;
 }
 
-export function initColorBuffer(gl: WebGLRenderingContext): WebGLBuffer {
+function initColorBuffer(gl: WebGLRenderingContext): WebGLBuffer {
   const faceColors = [
     [1.0, 1.0, 1.0, 1.0], // Front face: white
     [1.0, 0.0, 0.0, 1.0], // Back face: red

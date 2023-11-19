@@ -1,4 +1,4 @@
-import { run } from "./rotating-octohedron";
+import { run } from "./polygon";
 
 const canvas = document.querySelector("#glcanvas")! as HTMLCanvasElement;
 const gl = canvas.getContext("webgl")!;
