@@ -30,12 +30,9 @@ export function run(gl: WebGLRenderingContext): void {
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(
         shaderProgram,
-        "uProjectionMatrix",
+        "projectionMatrix",
       )!,
-      modelViewMatrix: gl.getUniformLocation(
-        shaderProgram,
-        "uModelViewMatrix",
-      )!,
+      modelViewMatrix: gl.getUniformLocation(shaderProgram, "modelMatrix")!,
     },
   };
 
@@ -108,12 +105,10 @@ function drawScene(
     modelViewMatrix,
   );
 
-  {
-    const vertexCount = 36;
-    const type = gl.UNSIGNED_SHORT;
-    const offset = 0;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-  }
+  const vertexCount = 36;
+  const type = gl.UNSIGNED_SHORT;
+  const offset = 0;
+  gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
 }
 
 function setPositionAttribute(
@@ -127,7 +122,7 @@ function setPositionAttribute(
   const stride = 0;
   const offset = 0;
 
-  const vertexPosition = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+  const vertexPosition = gl.getAttribLocation(shaderProgram, "position");
   gl.bindBuffer(gl.ARRAY_BUFFER, buffers.positions);
   gl.vertexAttribPointer(
     vertexPosition,
@@ -151,7 +146,7 @@ function setColorAttribute(
   const stride = 0;
   const offset = 0;
 
-  const vertexColor = gl.getAttribLocation(shaderProgram, "aVertexColor");
+  const vertexColor = gl.getAttribLocation(shaderProgram, "color");
   gl.bindBuffer(gl.ARRAY_BUFFER, buffers.colors);
   gl.vertexAttribPointer(
     vertexColor,
