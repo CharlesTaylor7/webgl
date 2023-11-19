@@ -171,8 +171,8 @@ export function initColorBuffer(gl: WebGLRenderingContext): WebGLBuffer {
 
   for (var j = 0; j < faceColors.length; ++j) {
     const c = faceColors[j];
-    // Repeat each color four times for the four vertices of the face
-    colors = colors.concat(c, c, c, c);
+    // Repeat each color 3 times for the vertices of each face
+    colors = colors.concat(c, c, c);
   }
 
   const colorBuffer = gl.createBuffer()!;
