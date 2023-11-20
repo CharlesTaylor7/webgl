@@ -5,51 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + TS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <style>
-    textarea {
-      resize: none;
+    * {
+      margin: 0;
+    }
+    html {
+      height: 100%;
+    }
+    body {
+      min-height: 100%;
     }
   </style>
   <body>
-    <canvas id="glcanvas" width="640" height="480"></canvas>
-
-<!--
-    <div class="flex gap-4">
-    <div class="flex flex-col">
-    <label for="vertexShader"> Vertex Shader </label>
-    <textarea
-    id="vertexShader"
-    class="rounded-xl border"
-    rows="30"
-    cols="30"
-    ></textarea>
-    </div>
-    <div class="flex flex-col">
-    <label for="fragmentShader"> Fragment Shader </label>
-    <textarea
-    id="fragmentShader"
-    class="rounded-xl border"
-    rows="30"
-    cols="30"
-    >
-    </textarea>
-    </div>
-    <div class="flex flex-col">
-    <label for="output">Output</label>
-    <textarea
-    id="output"
-    class="rounded-xl border"
-    readonly
-    rows="30"
-    cols="30"
-    >
-    </textarea>
-    </div>
-!-->
-
+    <canvas id="glcanvas" height="100%" width="100%"></canvas>
     <script type="module" src="/src/main.ts"></script>
-    </div>
   </body>
 </html>

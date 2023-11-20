@@ -187,7 +187,7 @@ function initColorBuffer(gl: WebGLRenderingContext): WebGLBuffer {
   return colorBuffer;
 }
 
-function initIndexBuffer(gl: WebGLRenderingContext): WebGLBuffer {
+function initIndexBuffer(gl: WebGLRenderingContext) {
   const indexBuffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
