@@ -1,4 +1,8 @@
-import { clearScene, initShaderProgram } from "../utils";
+import {
+  clearScene,
+  initShaderProgram,
+  resizeCanvasToDisplaySize,
+} from "../utils";
 
 import vertexShader from "./vertex.glsl?raw";
 import fragmentShader from "./fragment.glsl?raw";
@@ -19,7 +23,8 @@ function positionsOfUnity(n: number) {
 }
 
 export function run(gl: WebGLRenderingContext): void {
-  new PolygonRenderer(gl, 10).run();
+  resizeCanvasToDisplaySize(gl);
+  new PolygonRenderer(gl, 12).run();
 }
 
 class PolygonRenderer {

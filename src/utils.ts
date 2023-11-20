@@ -3,6 +3,12 @@ export type ProgramSource = {
   fragment: string;
 };
 
+export function resizeCanvasToDisplaySize(gl: WebGLRenderingContext) {
+  const canvas = gl.canvas as HTMLCanvasElement;
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+}
+
 export function clearScene(gl: WebGLRenderingContext) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clearDepth(1.0);
