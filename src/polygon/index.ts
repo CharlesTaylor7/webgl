@@ -1,26 +1,12 @@
 import {
   clearScene,
   initShaderProgram,
+  randomColor,
   resizeCanvasToDisplaySize,
 } from "../utils";
 
 import vertexShader from "./vertex.glsl?raw";
 import fragmentShader from "./fragment.glsl?raw";
-
-type Color = [number, number, number, number];
-
-function randomColor(): Color {
-  return [Math.random(), Math.random(), Math.random(), 1];
-}
-
-function positionsOfUnity(n: number) {
-  const angle = (2 * Math.PI) / n;
-  const positions: number[] = [];
-  for (let i = 0; i < n; i++) {
-    positions.push(Math.cos(angle * i), Math.sin(angle * i));
-  }
-  return positions;
-}
 
 export function run(gl: WebGLRenderingContext): void {
   resizeCanvasToDisplaySize(gl);
@@ -110,7 +96,6 @@ class PolygonRenderer {
       randomColor(),
     ).flatMap((c) => c);
 
-    console.log("colors", colors);
     const colorBuffer = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
@@ -122,7 +107,6 @@ class PolygonRenderer {
     for (let i = 0; i < this.vertexCount - 2; i++) {
       indices.push(0, i + 1, i + 2);
     }
-    console.log("indices", indices);
 
     const gl = this.gl;
     const indexBuffer = gl.createBuffer()!;

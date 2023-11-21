@@ -58,3 +58,18 @@ export function compileShader(
 
   return shader;
 }
+
+export type Color = [number, number, number, number];
+
+export function randomColor(): Color {
+  return [Math.random(), Math.random(), Math.random(), 1];
+}
+
+export function positionsOfUnity(n: number) {
+  const angle = (2 * Math.PI) / n;
+  const positions: number[] = [];
+  for (let i = 0; i < n; i++) {
+    positions.push(Math.cos(angle * i), Math.sin(angle * i));
+  }
+  return positions;
+}
