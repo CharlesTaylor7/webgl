@@ -1,6 +1,11 @@
 import { mat4 } from "gl-matrix";
 
-import { initShaderProgram, resizeToScreen } from "../utils";
+import {
+  clearScene,
+  getProjectionMatrix,
+  initShaderProgram,
+  resizeToScreen,
+} from "../utils";
 
 import vertexShader from "./vertex.glsl?raw";
 import fragmentShader from "./fragment.glsl?raw";
@@ -13,7 +18,7 @@ export function run(gl: WebGLRenderingContext): void {
   gl.uniformMatrix4fv(
     gl.getUniformLocation(shaderProgram, "projectionMatrix"),
     false,
-    getProjectionMatrix(gl.canvas as HTMLCanvasElement),
+    getProjectionMatrix(gl),
   );
   setPositionAttribute(gl, shaderProgram);
   setColorAttribute(gl, shaderProgram);
@@ -22,44 +27,39 @@ export function run(gl: WebGLRenderingContext): void {
   let deltaTime = 0;
   let then = 0;
   function render(nowMillis: number) {
-    const now = nowMillis * 0.001;
-    deltaTime = now - then;
-    then = now;
+    deltaTime = nowMillis - then;
+    then = nowMillis;
 
     resizeToScreen(gl);
     drawScene(gl, cubeRotation, shaderProgram);
-    cubeRotation += deltaTime;
+    cubeRotation += nowMillis - then;
 
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
 }
 
-function clearScene(gl: WebGLRenderingContext) {
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clearDepth(1.0);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-}
-
-function getProjectionMatrix(canvas: HTMLCanvasElement) {
-  const fieldOfView = (45 * Math.PI) / 180;
-  const aspect = canvas.clientWidth / canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = 100.0;
-  const projectionMatrix = mat4.create();
-  mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-
-  return projectionMatrix;
-}
-
 function getModelViewMatrix(cubeRotation: number) {
   const modelViewMatrix = mat4.create();
   mat4.translate(modelViewMatrix, modelViewMatrix, [-0, 0, -6]);
-  mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation, [0, 0, 1]);
-  mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.7, [0, 1, 0]);
-  mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.3, [1, 0, 0]);
+  mat4.rotate(
+    modelViewMatrix,
+    modelViewMatrix,
+    cubeRotation * 0.001,
+    [0, 0, 1],
+  );
+  mat4.rotate(
+    modelViewMatrix,
+    modelViewMatrix,
+    cubeRotation * 0.0007,
+    [0, 1, 0],
+  );
+  mat4.rotate(
+    modelViewMatrix,
+    modelViewMatrix,
+    cubeRotation * 0.0003,
+    [1, 0, 0],
+  );
   return modelViewMatrix;
 }
 

@@ -1,6 +1,11 @@
 import { mat4 } from "gl-matrix";
 
-import { initShaderProgram, resizeToScreen } from "../utils";
+import {
+  clearScene,
+  getProjectionMatrix,
+  initShaderProgram,
+  resizeToScreen,
+} from "../utils";
 
 import vertexShader from "./vertex.glsl?raw";
 import fragmentShader from "./fragment.glsl?raw";
@@ -13,7 +18,7 @@ export function run(gl: WebGLRenderingContext): void {
   gl.uniformMatrix4fv(
     gl.getUniformLocation(shaderProgram, "projectionMatrix"),
     false,
-    getProjectionMatrix(gl.canvas as HTMLCanvasElement),
+    getProjectionMatrix(gl),
   );
   setPositionAttribute(gl, shaderProgram);
   setColorAttribute(gl, shaderProgram);
@@ -33,25 +38,6 @@ export function run(gl: WebGLRenderingContext): void {
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
-}
-
-function clearScene(gl: WebGLRenderingContext) {
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clearDepth(1.0);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-}
-
-function getProjectionMatrix(canvas: HTMLCanvasElement) {
-  const fieldOfView = (45 * Math.PI) / 180;
-  const aspect = canvas.clientWidth / canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = 100.0;
-  const projectionMatrix = mat4.create();
-  mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-
-  return projectionMatrix;
 }
 
 function getModelViewMatrix(cubeRotation: number) {

@@ -1,3 +1,5 @@
+import { mat4 } from "gl-matrix";
+
 export type ProgramSource = {
   vertex: string;
   fragment: string;
@@ -74,4 +76,16 @@ export function resizeToScreen(gl: WebGLRenderingContext) {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
   gl.viewport(0, 0, canvas.width, canvas.height);
+}
+
+export function getProjectionMatrix(gl: WebGLRenderingContext) {
+  const canvas = gl.canvas as HTMLCanvasElement;
+  const fieldOfView = (45 * Math.PI) / 180;
+  const aspect = canvas.clientWidth / canvas.clientHeight;
+  const zNear = 0.1;
+  const zFar = 100.0;
+  const projectionMatrix = mat4.create();
+  mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+
+  return projectionMatrix;
 }
