@@ -55,12 +55,6 @@ export function compileShader(
   return shader;
 }
 
-export type Color = [number, number, number, number];
-
-export function randomColor(): Color {
-  return [Math.random(), Math.random(), Math.random(), 1];
-}
-
 export function positionsOfUnity(n: number) {
   const angle = (2 * Math.PI) / n;
   const positions: number[] = [];
@@ -88,4 +82,19 @@ export function getProjectionMatrix(gl: WebGLRenderingContext) {
   mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
   return projectionMatrix;
+}
+
+export type Color = [number, number, number, number];
+
+export function randomColor(): Color {
+  return [Math.random(), Math.random(), Math.random(), 1];
+}
+
+export function color(
+  red: number,
+  green: number,
+  blue: number,
+  alpha: number = 1,
+): Color {
+  return [red / 255, green / 255, blue / 255, alpha];
 }
