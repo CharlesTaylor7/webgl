@@ -27,7 +27,16 @@ export function run(gl: WebGLRenderingContext): void {
   let then = 0;
   function render(nowMillis: number) {
     resizeToScreen(gl);
-    drawScene(gl, cubeRotation, shaderProgram);
+    clearScene(gl);
+
+    gl.uniformMatrix4fv(
+      gl.getUniformLocation(shaderProgram, "modelMatrix"),
+      false,
+      getModelViewMatrix(cubeRotation),
+    );
+
+    drawScene(gl);
+
     cubeRotation += nowMillis - then;
     then = nowMillis;
 
@@ -61,20 +70,52 @@ function getModelViewMatrix(cubeRotation: number) {
   return modelViewMatrix;
 }
 
-function drawScene(
-  gl: WebGLRenderingContext,
-  cubeRotation: number,
-  shaderProgram: WebGLProgram,
-) {
-  clearScene(gl);
+function drawScene(gl: WebGLRenderingContext) {
+  gl.drawArrays(gl.LINE_LOOP, 0, 8);
+  gl.drawArrays(gl.LINE_LOOP, 8, 8);
+  gl.drawArrays(gl.LINE_LOOP, 16, 8);
+}
 
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(shaderProgram, "modelMatrix"),
-    false,
-    getModelViewMatrix(cubeRotation),
-  );
+// prettier-ignore
+function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
+  const positionBuffer = gl.createBuffer()!;
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  gl.drawArrays(gl.TRIANGLES, 0, 60);
+  let root_2 = Math.sqrt(2)
+  let positions = [
+    // z octagon
+    1.5, -root_2/2, 0,
+    1.5, root_2/2, 0,
+    root_2/2, 1.5, 0,
+    -root_2/2, 1.5, 0,
+    -1.5, root_2/2, 0,
+    -1.5, -root_2/2, 0,
+    -root_2/2, -1.5, 0,
+    root_2/2, -1.5, 0,
+    // y octagon
+    1.5, 0, -root_2/2,
+    1.5, 0, root_2/2,
+    root_2/2, 0, 1.5,
+    -root_2/2, 0, 1.5,
+    -1.5, 0, root_2/2, 
+    -1.5, 0, -root_2/2,
+    -root_2/2, 0, -1.5,
+    root_2/2, 0, -1.5,
+    // x octagon
+     0,1.5, -root_2/2,
+     0,1.5, root_2/2,
+     0,root_2/2, 1.5,
+     0,-root_2/2, 1.5,
+     0,-1.5, root_2/2, 
+     0, -1.5,-root_2/2,
+     0, -root_2/2,-1.5,
+     0, root_2/2,-1.5,
+  ]
+  console.log("num positions", positions.length)
+
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+  return positionBuffer;
 }
 
 function setPositionAttribute(
@@ -98,113 +139,6 @@ function setPositionAttribute(
     offset,
   );
   gl.enableVertexAttribArray(vertexPosition);
-}
-
-// prettier-ignore
-function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
-  const positionBuffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-
-  let positions = [
-    // triangles first
-    // anticlockwise around the top
-    // anticlockwise faces
-    // Tri Face 1
-    1, 0, 1,
-    1, 1, 0,
-    0, 1, 1,
-  
-    // Tri face 2
-    0, 1, 1,
-    -1, 1, 0,
-    -1, 0, 1,
-    // Tri Face 3
-    -1, 0, 1,
-    -1, -1, 0,
-    0, -1, 1,
-    // Tri Face 4
-    0, -1, 1,
-    1, -1, 0,
-    1, 0, 1,
-
-    // Tri Face 5
-    1, 0, -1,
-    1, 1, 0,
-    0, 1, -1,
-    // Tri face 6
-    0, 1, -1,
-    -1, 1, 0,
-    -1, 0, -1,
-    // Tri Face 7
-    -1, 0, -1,
-    -1, -1, 0,
-    0, -1, -1,
-    // Tri Face 8
-    0, -1, -1,
-    1, -1, 0,
-    1, 0, -1,
-
-    // Square Face top
-    1, 0, 1,
-    0, 1, 1,
-    -1, 0, 1,
-
-    -1, 0, 1,
-    0, -1, 1,
-    1, 0, 1,
-
-    // Square Face Bottom
-    1, 0, -1,
-    0, 1, -1,
-    -1, 0, -1,
-
-    -1, 0, -1,
-    0, -1, -1,
-    1, 0, -1,
-
-    // Square Face Front
-    1, -1, 0,
-    0, -1, 1,
-    -1, -1, 0,
-
-    -1, -1, 0,
-    0, -1, -1,
-    1, -1, 0,
-    // Square Face Back
-    1, 1, 0,
-    0, 1, 1,
-    -1, 1, 0,
-
-    -1, 1, 0,
-    0, 1, -1,
-    1, 1, 0,
-
-
-
-    // Square Face Right
-    1, 1, 0,
-    1, 0, 1,
-    1, -1, 0,
-
-    1, -1, 0,
-    1, 0, -1,
-    1, 1, 0,
-
-    // Square Face Left
-    -1, 1, 0,
-    -1, 0, 1,
-    -1, -1, 0,
-
-    -1, -1, 0,
-    -1, 0, -1,
-    -1, 1, 0,
-  ]
-  console.log(positions.length)
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  return positionBuffer;
 }
 
 function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
