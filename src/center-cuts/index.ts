@@ -1,4 +1,4 @@
-import { mat4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 import {
   Color,
   rgb,
@@ -18,12 +18,40 @@ import {
   setVertexIndices,
 } from "../typed-builder";
 
+type Polygon = {
+  color?: Color;
+  points: Point[];
+};
+type Point = vec3;
+
+const Colors = {
+  PINK: rgb(237, 47, 234),
+  SILVER: rgb(143, 143, 143),
+  BLUE: rgb(18, 54, 184),
+  GREEN: rgb(14, 82, 17),
+  RED: rgb(173, 25, 2),
+  ORANGE: rgb(235, 135, 21),
+  WHITE: rgb(255, 255, 255),
+  YELLOW: rgb(186, 194, 33),
+};
+
+function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
+  const positions = [];
+  for (let polygon of polygons) {
+    for (let point of polygon.points) {
+      positions.push(...point);
+    }
+  }
+  return new Float32Array(positions);
+}
+
 export function run(gl: WebGLRenderingContext): void {
-  const indices = indexPattern([8, 6], [6, 4]);
+  const polygons = initPolygons();
+  const indices = indexPattern(polygons);
   const p0 = default3DShaderProgram(gl);
   const p1 = setProjectionMatrix(gl, p0, getDefaultProjectionMatrix(gl));
-  const p2 = setVertexPositions(gl, p1, positionArray());
-  const p3 = setVertexColors(gl, p2, colorArray());
+  const p2 = setVertexPositions(gl, p1, polygonsToPositions(polygons));
+  const p3 = setVertexColors(gl, p2, colorArray(polygons));
   const p4 = setVertexIndices(gl, p3, indices);
 
   let cubeRotation = 0.0;
@@ -42,139 +70,22 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
-// prettier-ignore
-function positionArray(): Float32Array {
-  let a = 1.5;
-  let b = Math.sqrt(2) / 2;
-  return new Float32Array([
-    // pink
-     0, b, a,
-     b, 0, a,
-     a, 0, b,
-     a, b, 0, 
-     b, a, 0, 
-     0, a, b,
-
-     // silver
-     0, -b, -a,
-     -b, 0, -a,
-     -a, 0, -b,
-     -a, -b, 0, 
-     -b, -a, 0, 
-     0, -a, -b,
-
-     // blue
-     0, b, a,
-     -b, 0, a,
-     -a, 0, b,
-     -a, b, 0, 
-     -b, a, 0, 
-     0, a, b,
-
-     // green
-     0, -b, -a,
-     b, 0, -a,
-     a, 0, -b,
-     a, -b, 0, 
-     b, -a, 0, 
-     0, -a, -b,
- 
-     // red
-     0, -b, a,
-     -b, 0, a,
-     -a, 0, b,
-     -a, -b, 0, 
-     -b, -a, 0, 
-     0, -a, b,
-
-     // orange
-     0, b, -a,
-     b, 0, -a,
-     a, 0, -b,
-     a, b, 0, 
-     b, a, 0, 
-     0, a, -b,
-
-     // white
-     0, -b, a,
-     b, 0, a,
-     a, 0, b,
-     a, -b, 0, 
-     b, -a, 0, 
-     0, -a, b,
-
-     // yellow
-     0, b, -a,
-     -b, 0, -a,
-     -a, 0, -b,
-     -a, b, 0, 
-     -b, a, 0, 
-     0, a, -b,
-
-     // top square
-     b,0, a,
-     0, b, a,
-     -b,0, a,
-     0, -b, a,
-
-     // bottom square
-     b,0, -a,
-     0, b, -a,
-     -b,0, -a,
-     0, -b, -a,
-
-     // front square
-     b,-a, 0, 
-     0,  -a, b,
-     -b, -a, 0,
-     0,  -a, -b,
-
-     // back square
-     b,a, 0, 
-     0,  a, b,
-     -b, a, 0,
-     0,  a, -b,
-
-      // right  square
-     a, b, 0, 
-     a, 0,  b,
-     a, -b, 0,
-     a, 0, -b,
-
-      // left  square
-     -a, b, 0, 
-     -a, 0,  b,
-     -a, -b, 0,
-     -a, 0, -b,
-  ])
-}
-
-function indexPattern(...counts: [number, number][]): Uint16Array {
+function indexPattern(polygons: Polygon[]): Uint16Array {
   const indices: number[] = [];
   let total = 0;
-  for (let [repeat, vertexCount] of counts) {
-    for (let k = 0; k < repeat; k++) {
-      for (let i = 0; i < vertexCount - 2; i++) {
-        indices.push(total, total + i + 1, total + i + 2);
-      }
-      total += vertexCount;
+  for (let p of polygons) {
+    const vertexCount = p.points.length;
+    for (let i = 0; i < vertexCount - 2; i++) {
+      indices.push(total, total + i + 1, total + i + 2);
     }
+    total += vertexCount;
   }
 
   return new Uint16Array(indices);
 }
 
-function colorArray(): Float32Array {
-  const colors: Color[] = [
-    rgb(237, 47, 234), // pink
-    rgb(143, 143, 143), // silver
-    rgb(18, 54, 184), // blue
-    rgb(14, 82, 17), // green
-    rgb(173, 25, 2), // red
-    rgb(235, 135, 21), // orange
-    rgb(255, 255, 255), // white
-    rgb(186, 194, 33), // yellow
-  ];
+function colorArray(polygons: Polygon[]): Float32Array {
+  const colors: Color[] = [];
   const data: number[] = [];
   const nextColor = (() => {
     let i = 0;
@@ -190,21 +101,13 @@ function colorArray(): Float32Array {
     };
   })();
 
-  // hexes
-  for (let j = 0; j < 8; ++j) {
-    const c = nextColor();
-    for (let k = 0; k < 6; k++) {
+  for (let p of polygons) {
+    const c = p.color || nextColor();
+    for (let k = 0; k < p.points.length; k++) {
       data.push(...c);
     }
   }
 
-  // squares
-  for (let j = 0; j < 6; ++j) {
-    const c = nextColor();
-    for (let k = 0; k < 4; k++) {
-      data.push(...c);
-    }
-  }
   return new Float32Array(data);
 }
 
@@ -232,34 +135,48 @@ function getRotationMatrix(cubeRotation: number): mat4 {
 
   return modelViewMatrix;
 }
+function initPolygons(): Polygon[] {
+  let a = 1.5;
+  let b = Math.sqrt(2) / 2;
+  let c = b / 2;
+  // triangles
+  const t1: Point[] = [
+    [c, c, a],
+    [a, c, c],
+    [c, a, c],
+  ];
+  const t2 = rotateZ(t1);
+  const t3 = rotateZ(t2);
+  const t4 = rotateZ(t3);
+  const t5 = rotateY(t1);
+  const t6 = rotateZ(t5);
+  const t7 = rotateZ(t6);
+  const t8 = rotateZ(t7);
 
-// octagons
-/*
-    // z octagon
-    a, -b, 0,
-    a, b, 0,
-    b, a, 0,
-    -b, a, 0,
-    -a, b, 0,
-    -a, -b, 0,
-    -b, -a, 0,
-    b, -a, 0,
-    // y octagon
-    a, 0, -b,
-    a, 0, b,
-    b, 0, a,
-    -b, 0, a,
-    -a, 0, b, 
-    -a, 0, -b,
-    -b, 0, -a,
-    b, 0, -a,
-    // x octagon
-     0,a, -b,
-     0,a, b,
-     0,b, a,
-     0,-b, a,
-     0,-a, b, 
-     0, -a,-b,
-     0, -b,-a,
-     0, b,-a,
-     */
+  const s1: Point[] = [
+    [b, 0, a],
+    [0, b, a],
+    [-b, 0, a],
+    [0, -b, a],
+  ];
+  const s2 = rotateX(s1);
+  const s3 = rotateZ(s2);
+  const s4 = rotateZ(s3);
+  const s5 = rotateZ(s4);
+  const s6 = rotateX(s2);
+  return [t1, t2, t3, t4, t5, t6, t7, t8, s1, s2, s3, s4, s5, s6].map(
+    (points) => ({ points }),
+  );
+}
+
+function rotateZ(points: Point[]): Point[] {
+  return points.map((p) => [-p[1], p[0], p[2]]);
+}
+
+function rotateY(points: Point[]): Point[] {
+  return points.map((p) => [p[2], p[1], -p[0]]);
+}
+
+function rotateX(points: Point[]): Point[] {
+  return points.map((p) => [p[0], -p[2], p[1]]);
+}
