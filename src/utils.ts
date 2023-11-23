@@ -90,11 +90,6 @@ export function randomColor(): Color {
   return [Math.random(), Math.random(), Math.random(), 1];
 }
 
-export function color(
-  red: number,
-  green: number,
-  blue: number,
-  alpha: number = 1,
-): Color {
-  return [red / 255, green / 255, blue / 255, alpha];
+export function rgb(red: number, green: number, blue: number): Color {
+  return [red / 255, green / 255, blue / 255, 1.0];
 }

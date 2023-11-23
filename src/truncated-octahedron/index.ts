@@ -1,9 +1,12 @@
 import { mat4 } from "gl-matrix";
 
 import {
+  Color,
+  rgb,
   clearScene,
   getProjectionMatrix,
   initShaderProgram,
+  randomColor,
   resizeToScreen,
 } from "../utils";
 
@@ -26,7 +29,8 @@ export function run(gl: WebGLRenderingContext): void {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(
     gl.ELEMENT_ARRAY_BUFFER,
-    indexPattern([8, 8, 8, 4, 4, 4, 4, 4, 4]),
+    // six squares, 8 hexagons
+    indexPattern([8, 6], [6, 4]),
     gl.STATIC_DRAW,
   );
 
@@ -53,20 +57,7 @@ export function run(gl: WebGLRenderingContext): void {
 }
 
 function drawScene(gl: WebGLRenderingContext) {
-  // octagon outlines
-  //
-  gl.drawArrays(gl.LINE_LOOP, 0, 8);
-  gl.drawArrays(gl.LINE_LOOP, 8, 8);
-  gl.drawArrays(gl.LINE_LOOP, 16, 8);
-  // square faces
-  gl.drawArrays(gl.LINE_LOOP, 24, 4);
-  gl.drawArrays(gl.LINE_LOOP, 28, 4);
-  gl.drawArrays(gl.LINE_LOOP, 32, 4);
-  gl.drawArrays(gl.LINE_LOOP, 36, 4);
-  gl.drawArrays(gl.LINE_LOOP, 40, 4);
-  gl.drawArrays(gl.LINE_LOOP, 44, 4);
-
-  gl.drawElements(gl.TRIANGLES, 90, gl.UNSIGNED_SHORT, 0);
+  gl.drawElements(gl.TRIANGLES, 132, gl.UNSIGNED_SHORT, 0);
 }
 
 // prettier-ignore
@@ -74,70 +65,110 @@ function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
   const positionBuffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  let root_2 = Math.sqrt(2)
+  let a = 1.5;
+  let b = Math.sqrt(2) / 2;
   let positions = [
-    // z octagon
-    1.5, -root_2/2, 0,
-    1.5, root_2/2, 0,
-    root_2/2, 1.5, 0,
-    -root_2/2, 1.5, 0,
-    -1.5, root_2/2, 0,
-    -1.5, -root_2/2, 0,
-    -root_2/2, -1.5, 0,
-    root_2/2, -1.5, 0,
-    // y octagon
-    1.5, 0, -root_2/2,
-    1.5, 0, root_2/2,
-    root_2/2, 0, 1.5,
-    -root_2/2, 0, 1.5,
-    -1.5, 0, root_2/2, 
-    -1.5, 0, -root_2/2,
-    -root_2/2, 0, -1.5,
-    root_2/2, 0, -1.5,
-    // x octagon
-     0,1.5, -root_2/2,
-     0,1.5, root_2/2,
-     0,root_2/2, 1.5,
-     0,-root_2/2, 1.5,
-     0,-1.5, root_2/2, 
-     0, -1.5,-root_2/2,
-     0, -root_2/2,-1.5,
-     0, root_2/2,-1.5,
+    // pink
+     0, b, a,
+     b, 0, a,
+     a, 0, b,
+     a, b, 0, 
+     b, a, 0, 
+     0, a, b,
+
+     // silver
+     0, -b, -a,
+     -b, 0, -a,
+     -a, 0, -b,
+     -a, -b, 0, 
+     -b, -a, 0, 
+     0, -a, -b,
+
+     // blue
+     0, b, a,
+     -b, 0, a,
+     -a, 0, b,
+     -a, b, 0, 
+     -b, a, 0, 
+     0, a, b,
+
+     // green
+     0, -b, -a,
+     b, 0, -a,
+     a, 0, -b,
+     a, -b, 0, 
+     b, -a, 0, 
+     0, -a, -b,
+ 
+     // red
+     0, -b, a,
+     -b, 0, a,
+     -a, 0, b,
+     -a, -b, 0, 
+     -b, -a, 0, 
+     0, -a, b,
+
+     // orange
+     0, b, -a,
+     b, 0, -a,
+     a, 0, -b,
+     a, b, 0, 
+     b, a, 0, 
+     0, a, -b,
+
+     // white
+     0, -b, a,
+     b, 0, a,
+     a, 0, b,
+     a, -b, 0, 
+     b, -a, 0, 
+     0, -a, b,
+
+     // yellow
+     0, b, -a,
+     -b, 0, -a,
+     -a, 0, -b,
+     -a, b, 0, 
+     -b, a, 0, 
+     0, a, -b,
+
      // top square
-     root_2/2,0, 1.5,
-     0, root_2/2, 1.5,
-     -root_2/2,0, 1.5,
-     0, -root_2/2, 1.5,
+     b,0, a,
+     0, b, a,
+     -b,0, a,
+     0, -b, a,
+
      // bottom square
-     root_2/2,0, -1.5,
-     0, root_2/2, -1.5,
-     -root_2/2,0, -1.5,
-     0, -root_2/2, -1.5,
+     b,0, -a,
+     0, b, -a,
+     -b,0, -a,
+     0, -b, -a,
 
      // front square
-     root_2/2,-1.5, 0, 
-     0,  -1.5, root_2/2,
-     -root_2/2, -1.5, 0,
-     0,  -1.5, -root_2/2,
+     b,-a, 0, 
+     0,  -a, b,
+     -b, -a, 0,
+     0,  -a, -b,
 
      // back square
-     root_2/2,1.5, 0, 
-     0,  1.5, root_2/2,
-     -root_2/2, 1.5, 0,
-     0,  1.5, -root_2/2,
+     b,a, 0, 
+     0,  a, b,
+     -b, a, 0,
+     0,  a, -b,
+
       // right  square
-     1.5, root_2/2, 0, 
-     1.5, 0,  root_2/2,
-     1.5, -root_2/2, 0,
-     1.5, 0, -root_2/2,
+     a, b, 0, 
+     a, 0,  b,
+     a, -b, 0,
+     a, 0, -b,
 
       // left  square
-     -1.5, root_2/2, 0, 
-     -1.5, 0,  root_2/2,
-     -1.5, -root_2/2, 0,
-     -1.5, 0, -root_2/2,
+     -a, b, 0, 
+     -a, 0,  b,
+     -a, -b, 0,
+     -a, 0, -b,
+
   ]
-  console.log("num positions", positions.length)
 
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
@@ -167,60 +198,65 @@ function setPositionAttribute(
   gl.enableVertexAttribArray(vertexPosition);
 }
 
-function indexPattern(counts: number[]): Uint16Array {
+function indexPattern(...counts: [number, number][]): Uint16Array {
   const indices: number[] = [];
   let total = 0;
-  for (let count of counts) {
-    for (let i = 0; i < count - 2; i++) {
-      indices.push(total, total + i + 1, total + i + 2);
+  for (let [repeat, vertexCount] of counts) {
+    for (let k = 0; k < repeat; k++) {
+      for (let i = 0; i < vertexCount - 2; i++) {
+        indices.push(total, total + i + 1, total + i + 2);
+      }
+      total += vertexCount;
     }
-    total += count;
   }
 
   return new Uint16Array(indices);
 }
 
 function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
-  // eight triangular faces
-  const triangularFaces = [
-    [1.0, 1.0, 1.0, 1], //  white
-    [1.0, 0.0, 0.0, 1], //  red
-    [0.0, 1.0, 0.0, 1], //  green
-    [0.0, 0.0, 1.0, 1], //  blue
-    [1.0, 1.0, 0.0, 1], //  yellow
-    [1.0, 0.0, 1.0, 1], //  magenta
-    [0.0, 1.0, 1.0, 1], //  cyan
-    [0.5, 0.5, 0.5, 1], //  grey
+  var colors: Color[] = [
+    rgb(237, 47, 234), // pink
+    rgb(143, 143, 143), // silver
+    rgb(18, 54, 184), // blue
+    rgb(14, 82, 17), // green
+    rgb(173, 25, 2), // red
+    rgb(235, 135, 21), // orange
+    rgb(255, 255, 255), // white
+    rgb(186, 194, 33), // yellow
   ];
+  var data: number[] = [];
+  const nextColor = (() => {
+    let i = 0;
+    return () => {
+      i++;
+      let color = colors[i];
+      if (color !== undefined) {
+        return color;
+      }
+      color = randomColor();
+      console.log(JSON.stringify(color));
+      return color;
+    };
+  })();
 
-  const squareFaces = [
-    [1.0, 0.5, 0.0, 1], //  orange
-    [0.5, 0.2, 0.1, 1], // brown
-    [0.5, 0.2, 0.8, 1], // purple
-    [0.14759373986641555, 0.12219881675388389, 0.5906033132651336, 1],
-    [0.38226078899287597, 0.5851489767196165, 0.08183275204830642, 1],
-    [0.4584854602468402, 0.88051891197324, 0.7589112922990673, 1],
-  ];
-
-  // Convert the array of colors into a table for all the vertices.
-  var colors: number[] = [];
-
-  // Repeat each color 3 times for the vertices of each face
+  // hexes
   for (let j = 0; j < 8; ++j) {
-    const c = triangularFaces[j];
-    colors.push(...c, ...c, ...c);
+    const c = nextColor();
+    for (let k = 0; k < 6; k++) {
+      data.push(...c);
+    }
   }
 
-  console.log("square colors", JSON.stringify(squareFaces));
-  // Repeat each color 6 times for the vertices of each face
+  // squares
   for (let j = 0; j < 6; ++j) {
-    const c = squareFaces[j];
-    colors.push(...c, ...c, ...c, ...c, ...c, ...c);
+    const c = nextColor();
+    for (let k = 0; k < 4; k++) {
+      data.push(...c);
+    }
   }
-
   const colorBuffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
 
   const numComponents = 4;
   const type = gl.FLOAT;
@@ -263,3 +299,34 @@ function getModelViewMatrix(cubeRotation: number) {
 
   return modelViewMatrix;
 }
+
+// octagons
+/*
+    // z octagon
+    a, -b, 0,
+    a, b, 0,
+    b, a, 0,
+    -b, a, 0,
+    -a, b, 0,
+    -a, -b, 0,
+    -b, -a, 0,
+    b, -a, 0,
+    // y octagon
+    a, 0, -b,
+    a, 0, b,
+    b, 0, a,
+    -b, 0, a,
+    -a, 0, b, 
+    -a, 0, -b,
+    -b, 0, -a,
+    b, 0, -a,
+    // x octagon
+     0,a, -b,
+     0,a, b,
+     0,b, a,
+     0,-b, a,
+     0,-a, b, 
+     0, -a,-b,
+     0, -b,-a,
+     0, b,-a,
+     */
