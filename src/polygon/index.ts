@@ -1,15 +1,16 @@
 import {
   clearScene,
   initShaderProgram,
+  positionsOfUnity,
   randomColor,
-  resizeCanvasToDisplaySize,
+  resizeToScreen,
 } from "../utils";
 
 import vertexShader from "./vertex.glsl?raw";
 import fragmentShader from "./fragment.glsl?raw";
 
 export function run(gl: WebGLRenderingContext): void {
-  resizeCanvasToDisplaySize(gl);
+  resizeToScreen(gl);
   new PolygonRenderer(gl, 12).run();
 }
 

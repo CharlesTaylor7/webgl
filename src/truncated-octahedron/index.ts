@@ -22,6 +22,13 @@ export function run(gl: WebGLRenderingContext): void {
   );
   setPositionAttribute(gl, shaderProgram);
   setVertexColors(gl, shaderProgram);
+  const indexBuffer = gl.createBuffer()!;
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    indexPattern([8, 8, 8, 4, 4, 4, 4, 4, 4]),
+    gl.STATIC_DRAW,
+  );
 
   let cubeRotation = 0.0;
   let then = 0;
@@ -45,35 +52,21 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
-function getModelViewMatrix(cubeRotation: number) {
-  const modelViewMatrix = mat4.create();
-  mat4.translate(modelViewMatrix, modelViewMatrix, [-0, 0, -6]);
-  mat4.rotate(
-    modelViewMatrix,
-    modelViewMatrix,
-    cubeRotation * 0.001,
-    [0, 0, 1],
-  );
-  mat4.rotate(
-    modelViewMatrix,
-    modelViewMatrix,
-    cubeRotation * 0.0007,
-    [0, 1, 0],
-  );
-  mat4.rotate(
-    modelViewMatrix,
-    modelViewMatrix,
-    cubeRotation * 0.0003,
-    [1, 0, 0],
-  );
-
-  return modelViewMatrix;
-}
-
 function drawScene(gl: WebGLRenderingContext) {
+  // octagon outlines
+  //
   gl.drawArrays(gl.LINE_LOOP, 0, 8);
   gl.drawArrays(gl.LINE_LOOP, 8, 8);
   gl.drawArrays(gl.LINE_LOOP, 16, 8);
+  // square faces
+  gl.drawArrays(gl.LINE_LOOP, 24, 4);
+  gl.drawArrays(gl.LINE_LOOP, 28, 4);
+  gl.drawArrays(gl.LINE_LOOP, 32, 4);
+  gl.drawArrays(gl.LINE_LOOP, 36, 4);
+  gl.drawArrays(gl.LINE_LOOP, 40, 4);
+  gl.drawArrays(gl.LINE_LOOP, 44, 4);
+
+  gl.drawElements(gl.TRIANGLES, 90, gl.UNSIGNED_SHORT, 0);
 }
 
 // prettier-ignore
@@ -110,6 +103,39 @@ function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
      0, -1.5,-root_2/2,
      0, -root_2/2,-1.5,
      0, root_2/2,-1.5,
+     // top square
+     root_2/2,0, 1.5,
+     0, root_2/2, 1.5,
+     -root_2/2,0, 1.5,
+     0, -root_2/2, 1.5,
+     // bottom square
+     root_2/2,0, -1.5,
+     0, root_2/2, -1.5,
+     -root_2/2,0, -1.5,
+     0, -root_2/2, -1.5,
+
+     // front square
+     root_2/2,-1.5, 0, 
+     0,  -1.5, root_2/2,
+     -root_2/2, -1.5, 0,
+     0,  -1.5, -root_2/2,
+
+     // back square
+     root_2/2,1.5, 0, 
+     0,  1.5, root_2/2,
+     -root_2/2, 1.5, 0,
+     0,  1.5, -root_2/2,
+      // right  square
+     1.5, root_2/2, 0, 
+     1.5, 0,  root_2/2,
+     1.5, -root_2/2, 0,
+     1.5, 0, -root_2/2,
+
+      // left  square
+     -1.5, root_2/2, 0, 
+     -1.5, 0,  root_2/2,
+     -1.5, -root_2/2, 0,
+     -1.5, 0, -root_2/2,
   ]
   console.log("num positions", positions.length)
 
@@ -139,6 +165,19 @@ function setPositionAttribute(
     offset,
   );
   gl.enableVertexAttribArray(vertexPosition);
+}
+
+function indexPattern(counts: number[]): Uint16Array {
+  const indices: number[] = [];
+  let total = 0;
+  for (let count of counts) {
+    for (let i = 0; i < count - 2; i++) {
+      indices.push(total, total + i + 1, total + i + 2);
+    }
+    total += count;
+  }
+
+  return new Uint16Array(indices);
 }
 
 function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
@@ -198,4 +237,29 @@ function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
     offset,
   );
   gl.enableVertexAttribArray(vertexColor);
+}
+
+function getModelViewMatrix(cubeRotation: number) {
+  const modelViewMatrix = mat4.create();
+  mat4.translate(modelViewMatrix, modelViewMatrix, [-0, 0, -6]);
+  mat4.rotate(
+    modelViewMatrix,
+    modelViewMatrix,
+    cubeRotation * 0.001,
+    [0, 0, 1],
+  );
+  mat4.rotate(
+    modelViewMatrix,
+    modelViewMatrix,
+    cubeRotation * 0.0007,
+    [0, 1, 0],
+  );
+  mat4.rotate(
+    modelViewMatrix,
+    modelViewMatrix,
+    cubeRotation * 0.0003,
+    [1, 0, 0],
+  );
+
+  return modelViewMatrix;
 }
