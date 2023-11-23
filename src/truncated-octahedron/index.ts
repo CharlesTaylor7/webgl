@@ -8,29 +8,31 @@ import {
   resizeToScreen,
 } from "../utils";
 
-import { webglContext, safeDrawElements, WC } from "../typed-builder";
+import {
+  default3DShaderProgram,
+  setProjectionMatrix,
+  setVertexPositions,
+  setVertexColors,
+  setRotationMatrix,
+  safeDrawElements,
+  setVertexIndices,
+} from "../typed-builder";
 
 export function run(gl: WebGLRenderingContext): void {
   const indices = indexPattern([8, 6], [6, 4]);
-  const context = webglContext(gl).setProjectionMatrix(
-    getDefaultProjectionMatrix(gl),
-  );
-  context satisfies WC<"">;
-  /*
-  context
-    .setVertexPositions(positionArray())
-    .setVertexColors(colorArray())
-    .setVertexIndices(indices);
-    */
+  const p0 = default3DShaderProgram(gl);
+  const p1 = setProjectionMatrix(gl, p0, getDefaultProjectionMatrix(gl));
+  const p2 = setVertexPositions(gl, p1, positionArray());
+  const p3 = setVertexColors(gl, p2, colorArray());
+  const p4 = setVertexIndices(gl, p3, indices);
 
   let cubeRotation = 0.0;
   let then = 0;
   function render(nowMillis: number) {
     resizeToScreen(gl);
     clearScene(gl);
-    const complete = context.setRotationMatrix(getRotationMatrix(cubeRotation));
-
-    safeDrawElements(complete, gl.TRIANGLES, indices.length);
+    const p5 = setRotationMatrix(gl, p4, getRotationMatrix(cubeRotation));
+    safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
 
     cubeRotation += nowMillis - then;
     then = nowMillis;
