@@ -85,7 +85,12 @@ function indexPattern(polygons: Polygon[]): Uint16Array {
 }
 
 function colorArray(polygons: Polygon[]): Float32Array {
-  const colors: Color[] = [];
+  const colors: Color[] = [
+    // octagons
+    rgb(255, 255, 255),
+    rgb(255, 255, 255),
+    rgb(255, 255, 255),
+  ];
   const data: number[] = [];
   const nextColor = (() => {
     let i = 0;
@@ -138,12 +143,14 @@ function getRotationMatrix(cubeRotation: number): mat4 {
 function initPolygons(): Polygon[] {
   let a = 1.5;
   let b = Math.sqrt(2) / 2;
-  let c = b / 2;
+  let c = (a + b) / 2;
+  let d = b / 2;
+
   // triangles
   const t1: Point[] = [
-    [c, c, a],
-    [a, c, c],
-    [c, a, c],
+    [c, 0, c],
+    [0, c, c],
+    [c, c, 0],
   ];
   const t2 = rotateZ(t1);
   const t3 = rotateZ(t2);
@@ -153,6 +160,45 @@ function initPolygons(): Polygon[] {
   const t7 = rotateZ(t6);
   const t8 = rotateZ(t7);
 
+  // trapezoids
+  const tr1: Point[] = [
+    [c, 0, c],
+    [0, c, c],
+    [0, b, a],
+    [b, 0, a],
+  ];
+  const tr2 = rotateOctant1(tr1);
+  const tr3 = rotateOctant1(tr2);
+
+  const tr4 = rotateZ(tr1);
+  const tr5 = rotateZ(tr2);
+  const tr6 = rotateZ(tr3);
+
+  const tr7 = rotateZ(tr4);
+  const tr8 = rotateZ(tr5);
+  const tr9 = rotateZ(tr6);
+
+  const tr10 = rotateZ(tr7);
+  const tr11 = rotateZ(tr8);
+  const tr12 = rotateZ(tr9);
+
+  const tr13 = rotateY(tr1);
+  const tr14 = rotateY(tr2);
+  const tr15 = rotateY(tr3);
+
+  const tr16 = rotateZ(tr13);
+  const tr17 = rotateZ(tr14);
+  const tr18 = rotateZ(tr15);
+
+  const tr19 = rotateZ(tr16);
+  const tr20 = rotateZ(tr17);
+  const tr21 = rotateZ(tr18);
+
+  const tr22 = rotateZ(tr19);
+  const tr23 = rotateZ(tr20);
+  const tr24 = rotateZ(tr21);
+
+  // squares
   const s1: Point[] = [
     [b, 0, a],
     [0, b, a],
@@ -164,9 +210,84 @@ function initPolygons(): Polygon[] {
   const s4 = rotateZ(s3);
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
-  return [t1, t2, t3, t4, t5, t6, t7, t8, s1, s2, s3, s4, s5, s6].map(
-    (points) => ({ points }),
-  );
+
+  // z octagon
+  const o1: Point[] = [
+    [a, -b, 0],
+    [a, b, 0],
+    [b, a, 0],
+    [-b, a, 0],
+    [-a, b, 0],
+    [-a, -b, 0],
+    [-b, -a, 0],
+    [b, -a, 0],
+  ];
+  // y octagon
+  const o2: Point[] = [
+    [a, 0, -b],
+    [a, 0, b],
+    [b, 0, a],
+    [-b, 0, a],
+    [-a, 0, b],
+    [-a, 0, -b],
+    [-b, 0, -a],
+    [b, 0, -a],
+  ];
+  // x octagon
+  const o3: Point[] = [
+    [0, a, -b],
+    [0, a, b],
+    [0, b, a],
+    [0, -b, a],
+    [0, -a, b],
+    [0, -a, -b],
+    [0, -b, -a],
+    [0, b, -a],
+  ];
+
+  return [
+    o1,
+    o2,
+    o3,
+    t1,
+    t2,
+    t3,
+    t4,
+    t5,
+    t6,
+    t7,
+    t8,
+    tr1,
+    tr2,
+    tr3,
+    tr4,
+    tr5,
+    tr6,
+    tr7,
+    tr8,
+    tr9,
+    tr10,
+    tr11,
+    tr12,
+    tr13,
+    tr14,
+    tr15,
+    tr16,
+    tr17,
+    tr18,
+    tr19,
+    tr20,
+    tr21,
+    tr22,
+    tr23,
+    tr24,
+    s1,
+    s2,
+    s3,
+    s4,
+    s5,
+    s6,
+  ].map((points) => ({ points }));
 }
 
 function rotateZ(points: Point[]): Point[] {
@@ -179,4 +300,8 @@ function rotateY(points: Point[]): Point[] {
 
 function rotateX(points: Point[]): Point[] {
   return points.map((p) => [p[0], -p[2], p[1]]);
+}
+
+function rotateOctant1(points: Point[]): Point[] {
+  return points.map((p) => [p[2], p[0], p[1]]);
 }
