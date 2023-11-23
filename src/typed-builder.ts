@@ -74,25 +74,27 @@ export function default3DShaderProgram(
 export function setVertexPositions<K>(
   gl: WebGLRenderingContext,
   program: ShaderProgramNeeds<K>,
-  positionBuffer: Float32Array,
+  positions: Float32Array,
 ): ShaderProgramNeeds<Exclude<K, "vertexPosition">> {
+  const buffer = gl.createBuffer()!;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+  const attributeIndex = gl.getAttribLocation(program, "vertexPosition");
   const numComponents = 3;
   const type = gl.FLOAT;
   const normalize = false;
   const stride = 0;
   const offset = 0;
-
-  const vertexPosition = gl.getAttribLocation(program, "vertexPosition");
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   gl.vertexAttribPointer(
-    vertexPosition,
+    attributeIndex,
     numComponents,
     type,
     normalize,
     stride,
     offset,
   );
-  gl.enableVertexAttribArray(vertexPosition);
+  gl.enableVertexAttribArray(attributeIndex);
 
   // @ts-ignore
   return program;
@@ -101,25 +103,27 @@ export function setVertexPositions<K>(
 export function setVertexColors<K>(
   gl: WebGLRenderingContext,
   program: ShaderProgramNeeds<K>,
-  positionBuffer: Float32Array,
+  colors: Float32Array,
 ): ShaderProgramNeeds<Exclude<K, "vertexColor">> {
-  const numComponents = 3;
+  const buffer = gl.createBuffer()!;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+
+  const attributeIndex = gl.getAttribLocation(program, "vertexColor");
+  const numComponents = 4;
   const type = gl.FLOAT;
   const normalize = false;
   const stride = 0;
   const offset = 0;
-
-  const vertexPosition = gl.getAttribLocation(program, "vertexColor");
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   gl.vertexAttribPointer(
-    vertexPosition,
+    attributeIndex,
     numComponents,
     type,
     normalize,
     stride,
     offset,
   );
-  gl.enableVertexAttribArray(vertexPosition);
+  gl.enableVertexAttribArray(attributeIndex);
 
   // @ts-ignore
   return program;
