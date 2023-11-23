@@ -17,6 +17,15 @@ import {
   safeDrawElements,
   setVertexIndices,
 } from "../typed-builder";
+import { create } from "domain";
+
+/*
+TODO:
+- rotate camera with drag controls
+- rotate slices with keyboard controls 
+- hot key to reset the camera to default orientation
+- animate rotations
+*/
 
 type Polygon = {
   color?: Color;
@@ -54,20 +63,34 @@ export function run(gl: WebGLRenderingContext): void {
   const p3 = setVertexColors(gl, p2, colorArray(polygons));
   const p4 = setVertexIndices(gl, p3, indices);
 
-  let cubeRotation = 0.0;
-  let then = 0;
-  function render(nowMillis: number) {
+  let rotationMatrix = mat4.create();
+  mat4.translate(rotationMatrix, rotationMatrix, [0, 0, -6]);
+
+  document.onkeydown = (e) => {
+    const angle = Math.PI / 8;
+    if (e.key === "j") {
+      mat4.rotateX(rotationMatrix, rotationMatrix, angle);
+    } else if (e.key === "k") {
+      mat4.rotateX(rotationMatrix, rotationMatrix, -angle);
+    } else if (e.key === "h") {
+      mat4.rotateZ(rotationMatrix, rotationMatrix, angle);
+    } else if (e.key === "l") {
+      mat4.rotateZ(rotationMatrix, rotationMatrix, -angle);
+    } else if (e.key === "u") {
+      mat4.rotateY(rotationMatrix, rotationMatrix, angle);
+    } else if (e.key === "i") {
+      mat4.rotateY(rotationMatrix, rotationMatrix, -angle);
+    }
+    render();
+  };
+  function render() {
+    const p5 = setRotationMatrix(gl, p4, rotationMatrix);
     resizeToScreen(gl);
     clearScene(gl);
-    const p5 = setRotationMatrix(gl, p4, getRotationMatrix(cubeRotation));
     safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
-
-    cubeRotation += nowMillis - then;
-    then = nowMillis;
-
-    requestAnimationFrame(render);
   }
-  requestAnimationFrame(render);
+
+  render();
 }
 
 function indexPattern(polygons: Polygon[]): Uint16Array {
@@ -118,7 +141,6 @@ function colorArray(polygons: Polygon[]): Float32Array {
 
 function getRotationMatrix(cubeRotation: number): mat4 {
   const modelViewMatrix = mat4.create();
-  mat4.translate(modelViewMatrix, modelViewMatrix, [-0, 0, -6]);
   mat4.rotate(
     modelViewMatrix,
     modelViewMatrix,
