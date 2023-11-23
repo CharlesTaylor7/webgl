@@ -54,6 +54,8 @@ function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
   return new Float32Array(positions);
 }
 
+type Action = "j" | "k" | "h" | "l" | "u" | "i";
+
 export function run(gl: WebGLRenderingContext): void {
   const polygons = initPolygons();
   const indices = indexPattern(polygons);
@@ -66,31 +68,65 @@ export function run(gl: WebGLRenderingContext): void {
   let rotationMatrix = mat4.create();
   mat4.translate(rotationMatrix, rotationMatrix, [0, 0, -6]);
 
+  const actionBuffer: Action[] = [];
   document.onkeydown = (e) => {
-    const angle = Math.PI / 8;
-    if (e.key === "j") {
-      mat4.rotateX(rotationMatrix, rotationMatrix, angle);
-    } else if (e.key === "k") {
-      mat4.rotateX(rotationMatrix, rotationMatrix, -angle);
-    } else if (e.key === "h") {
-      mat4.rotateZ(rotationMatrix, rotationMatrix, angle);
-    } else if (e.key === "l") {
-      mat4.rotateZ(rotationMatrix, rotationMatrix, -angle);
-    } else if (e.key === "u") {
-      mat4.rotateY(rotationMatrix, rotationMatrix, angle);
-    } else if (e.key === "i") {
-      mat4.rotateY(rotationMatrix, rotationMatrix, -angle);
-    }
-    render();
+    actionBuffer.push(e.key as Action);
   };
-  function render() {
+
+  let then = 0;
+  let frame = 0;
+  let duration = 1000;
+  let rotation = Math.PI / 8;
+
+  function render(ms: number) {
+    const delta = ms - then;
+    then = ms;
+    frame += delta;
+    const amount = frame > duration ? duration - (frame - delta) : delta;
+
+    rotate(rotationMatrix, actionBuffer[0], (rotation * amount) / duration);
+    if (frame > duration) {
+      actionBuffer.shift();
+    }
+
     const p5 = setRotationMatrix(gl, p4, rotationMatrix);
     resizeToScreen(gl);
     clearScene(gl);
     safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
+
+    requestAnimationFrame(render);
   }
 
-  render();
+  requestAnimationFrame(render);
+}
+
+function rotate(matrix: mat4, action: Action, amount: number) {
+  if (action != undefined) {
+    console.log({ matrix, action, amount });
+  }
+  if (action == "j") {
+    mat4.rotateX(matrix, matrix, amount);
+  }
+
+  if (action == "k") {
+    mat4.rotateX(matrix, matrix, -amount);
+  }
+
+  if (action == "h") {
+    mat4.rotateY(matrix, matrix, amount);
+  }
+
+  if (action == "l") {
+    mat4.rotateY(matrix, matrix, -amount);
+  }
+
+  if (action == "u") {
+    mat4.rotateZ(matrix, matrix, amount);
+  }
+
+  if (action == "i") {
+    mat4.rotateZ(matrix, matrix, -amount);
+  }
 }
 
 function indexPattern(polygons: Polygon[]): Uint16Array {
@@ -124,7 +160,7 @@ function colorArray(polygons: Polygon[]): Float32Array {
         return color;
       }
       color = randomColor();
-      console.log(JSON.stringify(color));
+      // console.log(JSON.stringify(color));
       return color;
     };
   })();
@@ -139,29 +175,6 @@ function colorArray(polygons: Polygon[]): Float32Array {
   return new Float32Array(data);
 }
 
-function getRotationMatrix(cubeRotation: number): mat4 {
-  const modelViewMatrix = mat4.create();
-  mat4.rotate(
-    modelViewMatrix,
-    modelViewMatrix,
-    cubeRotation * 0.001,
-    [0, 0, 1],
-  );
-  mat4.rotate(
-    modelViewMatrix,
-    modelViewMatrix,
-    cubeRotation * 0.0007,
-    [0, 1, 0],
-  );
-  mat4.rotate(
-    modelViewMatrix,
-    modelViewMatrix,
-    cubeRotation * 0.0003,
-    [1, 0, 0],
-  );
-
-  return modelViewMatrix;
-}
 function initPolygons(): Polygon[] {
   let a = 1.5;
   let b = Math.sqrt(2) / 2;
