@@ -1,11 +1,6 @@
 import { mat4 } from "gl-matrix";
 import { initShaderProgram } from "./utils";
 
-declare const __brand: unique symbol;
-export type Branded<T, B> = T & { [__brand]: B };
-
-type ShaderProgramNeeds<Keys> = Branded<WebGLProgram, Keys>;
-
 const default3DVertexShader = `
   attribute vec4 vertexPosition;
   attribute vec4 vertexColor;
@@ -29,130 +24,130 @@ const default3DFragmentShader = `
   }
 `;
 
-export function setVertexIndices<K>(
-  gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
-  indices: Uint16Array,
-  usage: GLenum = gl.STATIC_DRAW,
-): ShaderProgramNeeds<Exclude<K, "vertexIndices">> {
-  const buffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, usage);
+declare const __brand: unique symbol;
+type Branded<T, B> = T & { [__brand]: B };
 
-  // @ts-ignore
-  return program;
-}
-
-export function safeDrawElements(
+export function webglContext(
   gl: WebGLRenderingContext,
-  // @ts-ignore
-  program: ShaderProgramNeeds<never>,
-  mode: GLenum,
-  count: number,
-) {
-  gl.drawElements(mode, count, gl.UNSIGNED_SHORT, 0);
-}
-
-export function default3DShaderProgram(
-  gl: WebGLRenderingContext,
-): ShaderProgramNeeds<
+): WebGLContext<
   | "vertexPosition"
   | "vertexColor"
   | "vertexIndices"
   | "rotationMatrix"
   | "projectionMatrix"
 > {
-  const program: WebGLProgram = initShaderProgram(gl, {
+  const program = initShaderProgram(gl, {
     vertex: default3DVertexShader,
     fragment: default3DFragmentShader,
-  });
+  }) as any;
 
-  // @ts-ignore
-  return program;
+  return new WebGLContext(gl, program);
+}
+export function safeDrawElements(
+  context: WebGLContext<never>,
+  mode: GLenum,
+  count: number,
+) {
+  return context._gl.drawElements(mode, count, context._gl.UNSIGNED_SHORT, 0);
 }
 
-export function setVertexPositions<K>(
-  gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
-  positions: Float32Array,
-): ShaderProgramNeeds<Exclude<K, "vertexPosition">> {
-  const buffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+export type WC<K> = WebGLContext<K>;
 
-  const attributeIndex = gl.getAttribLocation(program, "vertexPosition");
-  const numComponents = 3;
-  const type = gl.FLOAT;
-  const normalize = false;
-  const stride = 0;
-  const offset = 0;
-  gl.vertexAttribPointer(
-    attributeIndex,
-    numComponents,
-    type,
-    normalize,
-    stride,
-    offset,
-  );
-  gl.enableVertexAttribArray(attributeIndex);
+class WebGLContext<K> {
+  constructor(
+    readonly _gl: WebGLRenderingContext,
+    private readonly p: Branded<WebGLProgram, K>,
+  ) {}
 
-  // @ts-ignore
-  return program;
-}
+  setVertexIndices(
+    indices: Uint16Array,
+    usage?: GLenum,
+  ): WebGLContext<Exclude<K, "vertexIndices">> {
+    const gl = this._gl;
+    const buffer = gl.createBuffer()!;
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, usage || gl.STATIC_DRAW);
 
-export function setVertexColors<K>(
-  gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
-  colors: Float32Array,
-): ShaderProgramNeeds<Exclude<K, "vertexColor">> {
-  const buffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+    return this as WebGLContext<Exclude<K, "vertexIndices">>;
+  }
 
-  const attributeIndex = gl.getAttribLocation(program, "vertexColor");
-  const numComponents = 4;
-  const type = gl.FLOAT;
-  const normalize = false;
-  const stride = 0;
-  const offset = 0;
-  gl.vertexAttribPointer(
-    attributeIndex,
-    numComponents,
-    type,
-    normalize,
-    stride,
-    offset,
-  );
-  gl.enableVertexAttribArray(attributeIndex);
+  setVertexPositions<K>(
+    positions: Float32Array,
+  ): WebGLContext<Exclude<K, "vertexPosition">> {
+    const gl = this._gl;
+    const buffer = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
-  // @ts-ignore
-  return program;
-}
+    const attributeIndex = gl.getAttribLocation(this.p, "vertexPosition");
+    const numComponents = 3;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.vertexAttribPointer(
+      attributeIndex,
+      numComponents,
+      type,
+      normalize,
+      stride,
+      offset,
+    );
+    gl.enableVertexAttribArray(attributeIndex);
 
-export function setProjectionMatrix<K>(
-  gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
-  matrix: mat4,
-): ShaderProgramNeeds<Exclude<K, "projectionMatrix">> {
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(program, "projectionMatrix"),
-    false,
-    matrix,
-  );
-  // @ts-ignore
-  return program;
-}
+    return this as WebGLContext<Exclude<K, "vertexPosition">>;
+  }
 
-export function setRotationMatrix<K>(
-  gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
-  matrix: mat4,
-): ShaderProgramNeeds<Exclude<K, "rotationMatrix">> {
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(program, "rotationMatrix"),
-    false,
-    matrix,
-  );
-  // @ts-ignore
-  return program;
+  setVertexColors<K>(
+    colors: Float32Array,
+  ): WebGLContext<Exclude<K, "vertexColor">> {
+    const gl = this._gl;
+    const buffer = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+
+    const attributeIndex = gl.getAttribLocation(this.p, "vertexColor");
+    const numComponents = 4;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.vertexAttribPointer(
+      attributeIndex,
+      numComponents,
+      type,
+      normalize,
+      stride,
+      offset,
+    );
+    gl.enableVertexAttribArray(attributeIndex);
+
+    return this as WebGLContext<Exclude<K, "vertexColor">>;
+  }
+
+  setProjectionMatrix<K>(
+    matrix: mat4,
+  ): WebGLContext<Exclude<K, "projectionMatrix">> {
+    const gl = this._gl;
+    const program = this.p;
+    gl.uniformMatrix4fv(
+      gl.getUniformLocation(program, "projectionMatrix"),
+      false,
+      matrix,
+    );
+    return this as WebGLContext<Exclude<K, "projectionMatrix">>;
+  }
+
+  setRotationMatrix<K>(
+    matrix: mat4,
+  ): WebGLContext<Exclude<K, "rotationMatrix">> {
+    const gl = this._gl;
+    const program = this.p;
+    gl.uniformMatrix4fv(
+      gl.getUniformLocation(program, "rotationMatrix"),
+      false,
+      matrix,
+    );
+    return this as WebGLContext<Exclude<K, "rotationMatrix">>;
+  }
 }
