@@ -4,7 +4,7 @@ import {
   Color,
   rgb,
   clearScene,
-  getProjectionMatrix,
+  getDefaultProjectionMatrix,
   initShaderProgram,
   randomColor,
   resizeToScreen,
@@ -21,7 +21,7 @@ export function run(gl: WebGLRenderingContext): void {
   gl.uniformMatrix4fv(
     gl.getUniformLocation(shaderProgram, "projectionMatrix"),
     false,
-    getProjectionMatrix(gl),
+    getDefaultProjectionMatrix(gl),
   );
   setPositionAttribute(gl, shaderProgram);
   setVertexColors(gl, shaderProgram);
@@ -275,7 +275,7 @@ function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
   gl.enableVertexAttribArray(vertexColor);
 }
 
-function getModelViewMatrix(cubeRotation: number) {
+function getModelViewMatrix(cubeRotation: number): mat4 {
   const modelViewMatrix = mat4.create();
   mat4.translate(modelViewMatrix, modelViewMatrix, [-0, 0, -6]);
   mat4.rotate(

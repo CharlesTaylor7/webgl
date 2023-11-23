@@ -72,7 +72,7 @@ export function resizeToScreen(gl: WebGLRenderingContext) {
   gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-export function getProjectionMatrix(gl: WebGLRenderingContext) {
+export function getDefaultProjectionMatrix(gl: WebGLRenderingContext): mat4 {
   const canvas = gl.canvas as HTMLCanvasElement;
   const fieldOfView = (45 * Math.PI) / 180;
   const aspect = canvas.clientWidth / canvas.clientHeight;

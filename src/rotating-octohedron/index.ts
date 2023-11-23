@@ -2,7 +2,7 @@ import { mat4 } from "gl-matrix";
 
 import {
   clearScene,
-  getProjectionMatrix,
+  getDefaultProjectionMatrix,
   initShaderProgram,
   resizeToScreen,
 } from "../utils";
@@ -18,7 +18,7 @@ export function run(gl: WebGLRenderingContext): void {
   gl.uniformMatrix4fv(
     gl.getUniformLocation(shaderProgram, "projectionMatrix"),
     false,
-    getProjectionMatrix(gl),
+    getDefaultProjectionMatrix(gl),
   );
   setPositionAttribute(gl, shaderProgram);
   setColorAttribute(gl, shaderProgram);
