@@ -1,52 +1,38 @@
 import { mat4 } from "gl-matrix";
-
 import {
   Color,
   rgb,
   clearScene,
   getDefaultProjectionMatrix,
-  initShaderProgram,
   randomColor,
   resizeToScreen,
 } from "../utils";
 
-import vertexShader from "./vertex.glsl?raw";
-import fragmentShader from "./fragment.glsl?raw";
+import {
+  default3DShaderProgram,
+  setProjectionMatrix,
+  setVertexPositions,
+  setVertexColors,
+  setRotationMatrix,
+  safeDrawElements,
+  setVertexIndices,
+} from "../typed-builder";
 
 export function run(gl: WebGLRenderingContext): void {
-  const shaderProgram = initShaderProgram(gl, {
-    vertex: vertexShader,
-    fragment: fragmentShader,
-  });
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(shaderProgram, "projectionMatrix"),
-    false,
-    getDefaultProjectionMatrix(gl),
-  );
-  setPositionAttribute(gl, shaderProgram);
-  setVertexColors(gl, shaderProgram);
-  const indexBuffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bufferData(
-    gl.ELEMENT_ARRAY_BUFFER,
-    // six squares, 8 hexagons
-    indexPattern([8, 6], [6, 4]),
-    gl.STATIC_DRAW,
-  );
+  const indices = indexPattern([8, 6], [6, 4]);
+  const p0 = default3DShaderProgram(gl);
+  const p1 = setProjectionMatrix(gl, p0, getDefaultProjectionMatrix(gl));
+  const p2 = setVertexPositions(gl, p1, positionArray());
+  const p3 = setVertexColors(gl, p2, colorArray());
+  const p4 = setVertexIndices(gl, p3, indices);
 
   let cubeRotation = 0.0;
   let then = 0;
   function render(nowMillis: number) {
     resizeToScreen(gl);
     clearScene(gl);
-
-    gl.uniformMatrix4fv(
-      gl.getUniformLocation(shaderProgram, "modelMatrix"),
-      false,
-      getModelViewMatrix(cubeRotation),
-    );
-
-    drawScene(gl);
+    const p5 = setRotationMatrix(gl, p4, getRotationMatrix(cubeRotation));
+    safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
 
     cubeRotation += nowMillis - then;
     then = nowMillis;
@@ -56,18 +42,11 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
-function drawScene(gl: WebGLRenderingContext) {
-  gl.drawElements(gl.TRIANGLES, 132, gl.UNSIGNED_SHORT, 0);
-}
-
 // prettier-ignore
-function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
-  const positionBuffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
+function positionArray(): Float32Array {
   let a = 1.5;
   let b = Math.sqrt(2) / 2;
-  let positions = [
+  return new Float32Array([
     // pink
      0, b, a,
      b, 0, a,
@@ -167,35 +146,7 @@ function initPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
      -a, 0,  b,
      -a, -b, 0,
      -a, 0, -b,
-
-  ]
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  return positionBuffer;
-}
-
-function setPositionAttribute(
-  gl: WebGLRenderingContext,
-  program: WebGLProgram,
-) {
-  const numComponents = 3;
-  const type = gl.FLOAT;
-  const normalize = false;
-  const stride = 0;
-  const offset = 0;
-
-  const vertexPosition = gl.getAttribLocation(program, "vertexPosition");
-  gl.bindBuffer(gl.ARRAY_BUFFER, initPositionBuffer(gl));
-  gl.vertexAttribPointer(
-    vertexPosition,
-    numComponents,
-    type,
-    normalize,
-    stride,
-    offset,
-  );
-  gl.enableVertexAttribArray(vertexPosition);
+  ])
 }
 
 function indexPattern(...counts: [number, number][]): Uint16Array {
@@ -213,8 +164,8 @@ function indexPattern(...counts: [number, number][]): Uint16Array {
   return new Uint16Array(indices);
 }
 
-function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
-  var colors: Color[] = [
+function colorArray(): Float32Array {
+  const colors: Color[] = [
     rgb(237, 47, 234), // pink
     rgb(143, 143, 143), // silver
     rgb(18, 54, 184), // blue
@@ -224,7 +175,7 @@ function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
     rgb(255, 255, 255), // white
     rgb(186, 194, 33), // yellow
   ];
-  var data: number[] = [];
+  const data: number[] = [];
   const nextColor = (() => {
     let i = 0;
     return () => {
@@ -254,28 +205,10 @@ function setVertexColors(gl: WebGLRenderingContext, program: WebGLProgram) {
       data.push(...c);
     }
   }
-  const colorBuffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
-
-  const numComponents = 4;
-  const type = gl.FLOAT;
-  const normalize = false;
-  const stride = 0;
-  const offset = 0;
-  const vertexColor = gl.getAttribLocation(program, "vertexColor");
-  gl.vertexAttribPointer(
-    vertexColor,
-    numComponents,
-    type,
-    normalize,
-    stride,
-    offset,
-  );
-  gl.enableVertexAttribArray(vertexColor);
+  return new Float32Array(data);
 }
 
-function getModelViewMatrix(cubeRotation: number): mat4 {
+function getRotationMatrix(cubeRotation: number): mat4 {
   const modelViewMatrix = mat4.create();
   mat4.translate(modelViewMatrix, modelViewMatrix, [-0, 0, -6]);
   mat4.rotate(

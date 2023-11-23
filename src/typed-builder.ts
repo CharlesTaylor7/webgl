@@ -29,15 +29,44 @@ const default3DFragmentShader = `
   }
 `;
 
+export function setVertexIndices<K>(
+  gl: WebGLRenderingContext,
+  program: ShaderProgramNeeds<K>,
+  indices: Uint16Array,
+  usage: GLenum = gl.STATIC_DRAW,
+): ShaderProgramNeeds<Exclude<K, "vertexIndices">> {
+  const buffer = gl.createBuffer()!;
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, usage);
+
+  // @ts-ignore
+  return program;
+}
+
+export function safeDrawElements(
+  gl: WebGLRenderingContext,
+  // @ts-ignore
+  program: ShaderProgramNeeds<never>,
+  mode: GLenum,
+  count: number,
+) {
+  gl.drawElements(mode, count, gl.UNSIGNED_SHORT, 0);
+}
+
 export function default3DShaderProgram(
   gl: WebGLRenderingContext,
 ): ShaderProgramNeeds<
-  "vertexPosition" | "vertexColor" | "rotationMatrix" | "projectionMatrix"
+  | "vertexPosition"
+  | "vertexColor"
+  | "vertexIndices"
+  | "rotationMatrix"
+  | "projectionMatrix"
 > {
   const program: WebGLProgram = initShaderProgram(gl, {
     vertex: default3DVertexShader,
     fragment: default3DFragmentShader,
   });
+
   // @ts-ignore
   return program;
 }
@@ -46,7 +75,7 @@ export function setVertexPositions<K>(
   gl: WebGLRenderingContext,
   program: ShaderProgramNeeds<K>,
   positionBuffer: Float32Array,
-): program is ShaderProgramNeeds<Exclude<K, "vertexPosition">> {
+): ShaderProgramNeeds<Exclude<K, "vertexPosition">> {
   const numComponents = 3;
   const type = gl.FLOAT;
   const normalize = false;
@@ -64,14 +93,16 @@ export function setVertexPositions<K>(
     offset,
   );
   gl.enableVertexAttribArray(vertexPosition);
-  return true;
+
+  // @ts-ignore
+  return program;
 }
 
 export function setVertexColors<K>(
   gl: WebGLRenderingContext,
   program: ShaderProgramNeeds<K>,
   positionBuffer: Float32Array,
-): program is ShaderProgramNeeds<Exclude<K, "vertexColor">> {
+): ShaderProgramNeeds<Exclude<K, "vertexColor">> {
   const numComponents = 3;
   const type = gl.FLOAT;
   const normalize = false;
@@ -89,31 +120,35 @@ export function setVertexColors<K>(
     offset,
   );
   gl.enableVertexAttribArray(vertexPosition);
-  return true;
+
+  // @ts-ignore
+  return program;
 }
 
 export function setProjectionMatrix<K>(
   gl: WebGLRenderingContext,
   program: ShaderProgramNeeds<K>,
   matrix: mat4,
-): program is ShaderProgramNeeds<Exclude<K, "projectionMatrix">> {
+): ShaderProgramNeeds<Exclude<K, "projectionMatrix">> {
   gl.uniformMatrix4fv(
     gl.getUniformLocation(program, "projectionMatrix"),
     false,
     matrix,
   );
-  return true;
+  // @ts-ignore
+  return program;
 }
 
 export function setRotationMatrix<K>(
   gl: WebGLRenderingContext,
   program: ShaderProgramNeeds<K>,
   matrix: mat4,
-): program is ShaderProgramNeeds<Exclude<K, "rotationMatrix">> {
+): ShaderProgramNeeds<Exclude<K, "rotationMatrix">> {
   gl.uniformMatrix4fv(
     gl.getUniformLocation(program, "rotationMatrix"),
     false,
     matrix,
   );
-  return true;
+  // @ts-ignore
+  return program;
 }
