@@ -20,10 +20,11 @@ import {
 
 /*
 TODO:
-- rotate camera with keyboard controls
-- rotate slices with keyboard controls 
-- hot key to reset the camera to default orientation
-- animate rotations
+- [x] rotate camera with keyboard controls
+- [x] animate rotations
+- [ ] hot key to reset the camera to default orientation
+- [ ] rotate slices with keyboard controls 
+  - fix colors
 */
 
 type Polygon = {
@@ -32,15 +33,22 @@ type Polygon = {
 };
 type Point = vec3;
 
-const Colors = {
+const Colors: Record<string, Color> = {
   PINK: rgb(237, 47, 234),
   SILVER: rgb(143, 143, 143),
+  SKY_BLUE: [0.47274511543352515, 0.600756638089563, 0.9863821399867976, 1],
+  REDDISH_PINK: [0.96, 0.31, 0.51, 1],
+  LIGHT_PINK: [0.91, 0.68, 0.75, 1],
+  LIGHT_PURPLE: [0.77, 0.68, 0.92, 1],
+  CYAN: [0.05, 0.98, 0.94, 1],
+  TEAL: [0.13, 0.82, 0.64, 1],
+  VIOLET: [0.37, 0.31, 0.63, 1],
+  YELLOW: [0.7, 0.79, 0.17, 1],
   BLUE: rgb(18, 54, 184),
   GREEN: rgb(14, 82, 17),
   RED: rgb(173, 25, 2),
   ORANGE: rgb(235, 135, 21),
   WHITE: rgb(255, 255, 255),
-  YELLOW: rgb(186, 194, 33),
 };
 
 function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
@@ -128,7 +136,8 @@ export function run(gl: WebGLRenderingContext): void {
     const p5 = setRotationMatrix(gl, p4, rotationMatrix);
     resizeToScreen(gl);
     clearScene(gl);
-    safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
+    //safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
+    safeDrawElements(gl, p5, gl.TRIANGLES, indices.length / 2);
 
     requestAnimationFrame(render);
   }
@@ -176,27 +185,25 @@ function indexPattern(polygons: Polygon[]): Uint16Array {
   return new Uint16Array(indices);
 }
 
+function tap(x: any): any {
+  console.log(JSON.stringify(x));
+  return x;
+}
 function colorArray(polygons: Polygon[]): Float32Array {
   const colors: Color[] = [
     // octagons
     rgb(255, 255, 255),
     rgb(255, 255, 255),
     rgb(255, 255, 255),
-    Colors.PINK,
     Colors.SILVER,
+    Colors.PINK,
   ];
   const data: number[] = [];
   const nextColor = (() => {
     let i = 0;
     return () => {
       i++;
-      let color = colors[i];
-      if (color !== undefined) {
-        return color;
-      }
-      color = randomColor();
-      // console.log(JSON.stringify(color));
-      return color;
+      return colors[i] || tap(randomColor());
     };
   })();
 
