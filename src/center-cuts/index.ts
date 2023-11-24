@@ -17,11 +17,10 @@ import {
   safeDrawElements,
   setVertexIndices,
 } from "../typed-builder";
-import { create } from "domain";
 
 /*
 TODO:
-- rotate camera with drag controls
+- rotate camera with keyboard controls
 - rotate slices with keyboard controls 
 - hot key to reset the camera to default orientation
 - animate rotations
@@ -54,7 +53,34 @@ function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
   return new Float32Array(positions);
 }
 
-type Action = "j" | "k" | "h" | "l" | "u" | "i";
+const actions = {
+  // left hand for camera
+  // wasdqe
+  w: "c-x",
+  a: "c+y",
+  s: "c+x",
+  d: "c-y",
+  q: "c+z",
+  e: "c-z",
+
+  // right hand for rotations
+  // ijkluo
+  i: "r-x",
+  j: "r+y",
+  k: "r+x",
+  l: "r-y",
+  u: "r+z",
+  o: "r-z",
+} as const;
+const keys = Object.keys(actions);
+
+function isHotKey(key: string): key is HotKey {
+  return keys.includes(key);
+}
+type Actions = typeof actions;
+type HotKey = keyof Actions;
+type Action = Actions[HotKey];
+"r-x" satisfies Action;
 
 export function run(gl: WebGLRenderingContext): void {
   const polygons = initPolygons();
@@ -70,23 +96,33 @@ export function run(gl: WebGLRenderingContext): void {
 
   const actionBuffer: Action[] = [];
   document.onkeydown = (e) => {
-    actionBuffer.push(e.key as Action);
+    if (isHotKey(e.key)) {
+      actionBuffer.push(actions[e.key]);
+    }
   };
 
   let then = 0;
   let frame = 0;
-  let duration = 1000;
+  let duration = 400;
   let rotation = Math.PI / 8;
 
   function render(ms: number) {
+    const action = actionBuffer[0];
     const delta = ms - then;
     then = ms;
-    frame += delta;
+    if (action) {
+      frame += delta;
+    }
     const amount = frame > duration ? duration - (frame - delta) : delta;
 
-    rotate(rotationMatrix, actionBuffer[0], (rotation * amount) / duration);
+    if (action) {
+      console.log({ action, ms, delta, frame, duration, amount });
+    }
+    rotate(rotationMatrix, action, (rotation * delta) / duration);
+    //(rotation * amount) / duration);
     if (frame > duration) {
       actionBuffer.shift();
+      frame = 0;
     }
 
     const p5 = setRotationMatrix(gl, p4, rotationMatrix);
@@ -101,30 +137,27 @@ export function run(gl: WebGLRenderingContext): void {
 }
 
 function rotate(matrix: mat4, action: Action, amount: number) {
-  if (action != undefined) {
-    console.log({ matrix, action, amount });
-  }
-  if (action == "j") {
+  if (action == "c+x") {
     mat4.rotateX(matrix, matrix, amount);
   }
 
-  if (action == "k") {
+  if (action == "c-x") {
     mat4.rotateX(matrix, matrix, -amount);
   }
 
-  if (action == "h") {
+  if (action == "c+y") {
     mat4.rotateY(matrix, matrix, amount);
   }
 
-  if (action == "l") {
+  if (action == "c-y") {
     mat4.rotateY(matrix, matrix, -amount);
   }
 
-  if (action == "u") {
+  if (action == "c+z") {
     mat4.rotateZ(matrix, matrix, amount);
   }
 
-  if (action == "i") {
+  if (action == "c-z") {
     mat4.rotateZ(matrix, matrix, -amount);
   }
 }
@@ -149,6 +182,8 @@ function colorArray(polygons: Polygon[]): Float32Array {
     rgb(255, 255, 255),
     rgb(255, 255, 255),
     rgb(255, 255, 255),
+    Colors.PINK,
+    Colors.SILVER,
   ];
   const data: number[] = [];
   const nextColor = (() => {
@@ -340,3 +375,17 @@ function rotateX(points: Point[]): Point[] {
 function rotateOctant1(points: Point[]): Point[] {
   return points.map((p) => [p[2], p[0], p[1]]);
 }
+
+// BLOG: const assertions and DRY unions
+// how to have a typed union based on an array literal:
+/*
+
+type ValuesOf<T> = T extends ReadonlyArray<infer E> ? E : never;
+
+const actions = ["j", "k", "h", "l", "u", "i"] as const;
+type Action = ValuesOf<typeof actions>;
+function isAction(key: string): key is Action {
+  return actions.contains(key);
+}
+
+*/
