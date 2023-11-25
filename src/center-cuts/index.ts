@@ -127,20 +127,20 @@ export function run(gl: WebGLRenderingContext): void {
   let frame = 0;
   let duration = 400;
   let rotation = Math.PI / 8;
+  let delta = 0;
 
   function render(ms: number) {
     const action = actionBuffer[0];
-    const delta = ms - then;
-    then = ms;
     if (action) {
+      delta = ms - then;
       frame += delta;
     }
-    const amount = frame > duration ? duration - (frame - delta) : delta;
+    then = ms;
 
-    if (action) {
-      console.log({ action, ms, delta, frame, duration, amount });
+    if (action && action.startsWith("c")) {
+      rotate(cameraRotation, action, (rotation * delta) / duration);
     }
-    rotate(cameraRotation, action, (rotation * delta) / duration);
+
     //(rotation * amount) / duration);
     if (frame > duration) {
       actionBuffer.shift();
@@ -153,7 +153,9 @@ export function run(gl: WebGLRenderingContext): void {
     drawElements(gl, p5, gl.TRIANGLES, 0, indices.length / 2);
 
     const rotationMatrix = mat4.create();
-    mat4.fromRotation(rotationMatrix, Math.PI / 8, [1, 1, 1]);
+    if (action && action.startsWith("r")) {
+      mat4.fromRotation(rotationMatrix, frame / duration, [1, 1, 1]);
+    }
     mat4.multiply(rotationMatrix, cameraRotation, rotationMatrix);
 
     p5 = setRotationMatrix(gl, p4, rotationMatrix);
@@ -165,29 +167,29 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
-function rotate(matrix: mat4, action: Action, amount: number) {
+function rotate(camera: mat4, action: Action, amount: number) {
   if (action == "c+x") {
-    mat4.rotateX(matrix, matrix, amount);
+    mat4.rotateX(camera, camera, amount);
   }
 
   if (action == "c-x") {
-    mat4.rotateX(matrix, matrix, -amount);
+    mat4.rotateX(camera, camera, -amount);
   }
 
   if (action == "c+y") {
-    mat4.rotateY(matrix, matrix, amount);
+    mat4.rotateY(camera, camera, amount);
   }
 
   if (action == "c-y") {
-    mat4.rotateY(matrix, matrix, -amount);
+    mat4.rotateY(camera, camera, -amount);
   }
 
   if (action == "c+z") {
-    mat4.rotateZ(matrix, matrix, amount);
+    mat4.rotateZ(camera, camera, amount);
   }
 
   if (action == "c-z") {
-    mat4.rotateZ(matrix, matrix, -amount);
+    mat4.rotateZ(camera, camera, -amount);
   }
 }
 

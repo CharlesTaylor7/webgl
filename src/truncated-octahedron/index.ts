@@ -14,7 +14,7 @@ import {
   setVertexPositions,
   setVertexColors,
   setRotationMatrix,
-  safeDrawElements,
+  drawElements,
   setVertexIndices,
 } from "../typed-builder";
 
@@ -32,7 +32,7 @@ export function run(gl: WebGLRenderingContext): void {
     resizeToScreen(gl);
     clearScene(gl);
     const p5 = setRotationMatrix(gl, p4, getRotationMatrix(cubeRotation));
-    safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
+    drawElements(gl, p5, gl.TRIANGLES, 0, indices.length);
 
     cubeRotation += nowMillis - then;
     then = nowMillis;
