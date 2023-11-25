@@ -28,9 +28,11 @@ TODO:
 - [ ] hot key to reset the camera to default orientation
 - [ ] rotate slices with keyboard controls 
   - [x] fix colors
-  - [ ] draw half the puzzle
-  - [ ] draw arrays in two passes
-  - [ ] animate
+  - [x] draw half the puzzle
+  - [x] draw arrays in two passes
+  - [x] animate
+  - [ ] internal model of puzzle
+  - [ ] permute colors instead of positions
 */
 type Polygon = {
   color: Color;
