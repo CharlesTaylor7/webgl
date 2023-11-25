@@ -14,7 +14,7 @@ import {
   setVertexPositions,
   setVertexColors,
   setRotationMatrix,
-  safeDrawElements,
+  drawElements,
   setVertexIndices,
 } from "../typed-builder";
 
@@ -113,8 +113,8 @@ export function run(gl: WebGLRenderingContext): void {
   const p3 = setVertexColors(gl, p2, colorArray(polygons));
   const p4 = setVertexIndices(gl, p3, indices);
 
-  let rotationMatrix = mat4.create();
-  mat4.translate(rotationMatrix, rotationMatrix, [0, 0, -6]);
+  let cameraRotation = mat4.create();
+  mat4.translate(cameraRotation, cameraRotation, [0, 0, -6]);
 
   const actionBuffer: Action[] = [];
   document.onkeydown = (e) => {
@@ -140,17 +140,24 @@ export function run(gl: WebGLRenderingContext): void {
     if (action) {
       console.log({ action, ms, delta, frame, duration, amount });
     }
-    rotate(rotationMatrix, action, (rotation * delta) / duration);
+    rotate(cameraRotation, action, (rotation * delta) / duration);
     //(rotation * amount) / duration);
     if (frame > duration) {
       actionBuffer.shift();
       frame = 0;
     }
 
-    const p5 = setRotationMatrix(gl, p4, rotationMatrix);
     resizeToScreen(gl);
     clearScene(gl);
-    safeDrawElements(gl, p5, gl.TRIANGLES, indices.length / 2);
+    let p5 = setRotationMatrix(gl, p4, cameraRotation);
+    drawElements(gl, p5, gl.TRIANGLES, 0, indices.length / 2);
+
+    const rotationMatrix = mat4.create();
+    mat4.fromRotation(rotationMatrix, Math.PI / 8, [1, 1, 1]);
+    mat4.multiply(rotationMatrix, cameraRotation, rotationMatrix);
+
+    p5 = setRotationMatrix(gl, p4, rotationMatrix);
+    drawElements(gl, p5, gl.TRIANGLES, indices.length / 2, indices.length / 2);
 
     requestAnimationFrame(render);
   }
@@ -272,11 +279,11 @@ function initPieces(): Piece[] {
   return [
     // stationary
     // cross section
-    [{ color: Colors.LIGHT_BLUE, points: crossSection }],
+    [{ color: Colors.LIGHT_GREEN, points: crossSection }],
     // triangles
     [{ color: Colors.SILVER, points: t1 }],
     [{ color: Colors.RED, points: t2 }],
-    [{ color: Colors.WHITE, points: t4 }],
+    [{ color: Colors.LIGHT_BLUE, points: t4 }],
     [{ color: Colors.BLUE, points: t5 }],
 
     // square capped pieces
@@ -285,13 +292,13 @@ function initPieces(): Piece[] {
       { color: Colors.SILVER, points: tr1 },
       { color: Colors.RED, points: tr2 },
       { color: Colors.GREEN, points: tr3 },
-      { color: Colors.WHITE, points: tr4 },
+      { color: Colors.LIGHT_BLUE, points: tr4 },
     ],
     [
       { color: Colors.TEAL, points: s3 },
       { color: Colors.BLUE, points: rotateY(tr1) },
       { color: Colors.SILVER, points: rotateY(tr2) },
-      { color: Colors.WHITE, points: rotateY(tr3) },
+      { color: Colors.LIGHT_BLUE, points: rotateY(tr3) },
       { color: Colors.ORANGE, points: rotateY(tr4) },
     ],
     [
@@ -304,7 +311,7 @@ function initPieces(): Piece[] {
 
     // rotated
     // cross section
-    [{ color: Colors.LIGHT_BLUE, points: crossSection }],
+    [{ color: Colors.LIGHT_GREEN, points: crossSection }],
     // triangles
     [{ color: Colors.GREEN, points: t3 }],
     [{ color: Colors.YELLOW, points: t6 }],
@@ -312,7 +319,7 @@ function initPieces(): Piece[] {
     [{ color: Colors.ORANGE, points: t8 }],
     [
       { color: Colors.VIOLET, points: s2 },
-      { color: Colors.WHITE, points: rotateX(tr1) },
+      { color: Colors.LIGHT_BLUE, points: rotateX(tr1) },
       { color: Colors.GREEN, points: rotateX(tr2) },
       { color: Colors.PINK, points: rotateX(tr3) },
       { color: Colors.ORANGE, points: rotateX(tr4) },

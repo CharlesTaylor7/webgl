@@ -43,14 +43,15 @@ export function setVertexIndices<K>(
   return program;
 }
 
-export function safeDrawElements(
+export function drawElements(
   gl: WebGLRenderingContext,
   // @ts-ignore
   program: ShaderProgramNeeds<never>,
   mode: GLenum,
+  offset: number,
   count: number,
 ) {
-  gl.drawElements(mode, count, gl.UNSIGNED_SHORT, 0);
+  gl.drawElements(mode, count, gl.UNSIGNED_SHORT, 2 * offset);
 }
 
 export function default3DShaderProgram(
