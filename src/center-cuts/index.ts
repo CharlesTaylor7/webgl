@@ -21,35 +21,48 @@ import {
 /*
 TODO:
 - [x] rotate camera with keyboard controls
-- [x] animate rotations
+- [x] animate camera
+- [ ] outlines or gaps between pieces
+- [ ] lighting
+- [ ] less harsh background
 - [ ] hot key to reset the camera to default orientation
 - [ ] rotate slices with keyboard controls 
-  - fix colors
+  - [x] fix colors
+  - [ ] draw half the puzzle
+  - [ ] draw arrays in two passes
+  - [ ] animate
 */
-
 type Polygon = {
-  color?: Color;
+  color: Color;
   points: Point[];
+};
+type Piece = {
+  facets: Polygon[];
 };
 type Point = vec3;
 
-const Colors: Record<string, Color> = {
+const Colors = {
   PINK: rgb(237, 47, 234),
   SILVER: rgb(143, 143, 143),
-  SKY_BLUE: [0.47274511543352515, 0.600756638089563, 0.9863821399867976, 1],
-  REDDISH_PINK: [0.96, 0.31, 0.51, 1],
-  LIGHT_PINK: [0.91, 0.68, 0.75, 1],
-  LIGHT_PURPLE: [0.77, 0.68, 0.92, 1],
-  CYAN: [0.05, 0.98, 0.94, 1],
-  TEAL: [0.13, 0.82, 0.64, 1],
-  VIOLET: [0.37, 0.31, 0.63, 1],
-  YELLOW: [0.7, 0.79, 0.17, 1],
+  BLUE_VIOLET: [0.47, 0.6, 0.99, 1] as Color,
+  SKY_BLUE: rgb(135, 206, 235),
+  LIGHT_BLUE: rgb(212, 241, 252),
+  LIGHT_GREEN: rgb(221, 250, 220),
+  REDDISH_PINK: [0.96, 0.31, 0.51, 1] as Color,
+  LIGHT_RED: [0.91, 0.68, 0.75, 1] as Color,
+  LIGHT_PINK: rgb(252, 222, 255),
+  LIGHT_PURPLE: [0.77, 0.68, 0.92, 1] as Color,
+  CYAN: [0.05, 0.98, 0.94, 1] as Color,
+  TEAL: [0.13, 0.82, 0.64, 1] as Color,
+  VIOLET: [0.37, 0.31, 0.63, 1] as Color,
+  YELLOW: [0.7, 0.79, 0.17, 1] as Color,
   BLUE: rgb(18, 54, 184),
   GREEN: rgb(14, 82, 17),
   RED: rgb(173, 25, 2),
   ORANGE: rgb(235, 135, 21),
-  WHITE: rgb(255, 255, 255),
-};
+  WHITE: rgb(244, 244, 245),
+} as const;
+Colors satisfies Record<string, Color>;
 
 function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
   const positions = [];
@@ -91,7 +104,8 @@ type Action = Actions[HotKey];
 "r-x" satisfies Action;
 
 export function run(gl: WebGLRenderingContext): void {
-  const polygons = initPolygons();
+  const pieces = initPieces();
+  const polygons = pieces.flatMap((p) => p.facets);
   const indices = indexPattern(polygons);
   const p0 = default3DShaderProgram(gl);
   const p1 = setProjectionMatrix(gl, p0, getDefaultProjectionMatrix(gl));
@@ -136,7 +150,6 @@ export function run(gl: WebGLRenderingContext): void {
     const p5 = setRotationMatrix(gl, p4, rotationMatrix);
     resizeToScreen(gl);
     clearScene(gl);
-    //safeDrawElements(gl, p5, gl.TRIANGLES, indices.length);
     safeDrawElements(gl, p5, gl.TRIANGLES, indices.length / 2);
 
     requestAnimationFrame(render);
@@ -190,25 +203,10 @@ function tap(x: any): any {
   return x;
 }
 function colorArray(polygons: Polygon[]): Float32Array {
-  const colors: Color[] = [
-    // octagons
-    rgb(255, 255, 255),
-    rgb(255, 255, 255),
-    rgb(255, 255, 255),
-    Colors.SILVER,
-    Colors.PINK,
-  ];
   const data: number[] = [];
-  const nextColor = (() => {
-    let i = 0;
-    return () => {
-      i++;
-      return colors[i] || tap(randomColor());
-    };
-  })();
 
   for (let p of polygons) {
-    const c = p.color || nextColor();
+    const c = p.color || tap(randomColor());
     for (let k = 0; k < p.points.length; k++) {
       data.push(...c);
     }
@@ -217,7 +215,7 @@ function colorArray(polygons: Polygon[]): Float32Array {
   return new Float32Array(data);
 }
 
-function initPolygons(): Polygon[] {
+function initPieces(): Piece[] {
   let a = 1.5;
   let b = Math.sqrt(2) / 2;
   let c = (a + b) / 2;
@@ -244,37 +242,20 @@ function initPolygons(): Polygon[] {
     [0, b, a],
     [b, 0, a],
   ];
-  const tr2 = rotateOctant1(tr1);
-  const tr3 = rotateOctant1(tr2);
+  const tr2 = rotateZ(tr1);
+  const tr3 = rotateZ(tr2);
+  const tr4 = rotateZ(tr3);
 
-  const tr4 = rotateZ(tr1);
-  const tr5 = rotateZ(tr2);
-  const tr6 = rotateZ(tr3);
-
-  const tr7 = rotateZ(tr4);
-  const tr8 = rotateZ(tr5);
-  const tr9 = rotateZ(tr6);
-
-  const tr10 = rotateZ(tr7);
-  const tr11 = rotateZ(tr8);
-  const tr12 = rotateZ(tr9);
-
-  const tr13 = rotateY(tr1);
-  const tr14 = rotateY(tr2);
-  const tr15 = rotateY(tr3);
-
-  const tr16 = rotateZ(tr13);
-  const tr17 = rotateZ(tr14);
-  const tr18 = rotateZ(tr15);
-
-  const tr19 = rotateZ(tr16);
-  const tr20 = rotateZ(tr17);
-  const tr21 = rotateZ(tr18);
-
-  const tr22 = rotateZ(tr19);
-  const tr23 = rotateZ(tr20);
-  const tr24 = rotateZ(tr21);
-
+  const crossSection = (
+    [
+      [c, 0, c],
+      [0, -c, c],
+      [-c, -c, 0],
+      [-c, 0, -c],
+      [0, c, -c],
+      [c, c, 0],
+    ] as Point[]
+  ).map(rotatePointY);
   // squares
   const s1: Point[] = [
     [b, 0, a],
@@ -288,99 +269,112 @@ function initPolygons(): Polygon[] {
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
 
-  // z octagon
-  const o1: Point[] = [
-    [a, -b, 0],
-    [a, b, 0],
-    [b, a, 0],
-    [-b, a, 0],
-    [-a, b, 0],
-    [-a, -b, 0],
-    [-b, -a, 0],
-    [b, -a, 0],
-  ];
-  // y octagon
-  const o2: Point[] = [
-    [a, 0, -b],
-    [a, 0, b],
-    [b, 0, a],
-    [-b, 0, a],
-    [-a, 0, b],
-    [-a, 0, -b],
-    [-b, 0, -a],
-    [b, 0, -a],
-  ];
-  // x octagon
-  const o3: Point[] = [
-    [0, a, -b],
-    [0, a, b],
-    [0, b, a],
-    [0, -b, a],
-    [0, -a, b],
-    [0, -a, -b],
-    [0, -b, -a],
-    [0, b, -a],
-  ];
-
   return [
-    o1,
-    o2,
-    o3,
-    t1,
-    t2,
-    t3,
-    t4,
-    t5,
-    t6,
-    t7,
-    t8,
-    tr1,
-    tr2,
-    tr3,
-    tr4,
-    tr5,
-    tr6,
-    tr7,
-    tr8,
-    tr9,
-    tr10,
-    tr11,
-    tr12,
-    tr13,
-    tr14,
-    tr15,
-    tr16,
-    tr17,
-    tr18,
-    tr19,
-    tr20,
-    tr21,
-    tr22,
-    tr23,
-    tr24,
-    s1,
-    s2,
-    s3,
-    s4,
-    s5,
-    s6,
-  ].map((points) => ({ points }));
+    // stationary
+    // cross section
+    [{ color: Colors.LIGHT_BLUE, points: crossSection }],
+    // triangles
+    [{ color: Colors.SILVER, points: t1 }],
+    [{ color: Colors.RED, points: t2 }],
+    [{ color: Colors.WHITE, points: t4 }],
+    [{ color: Colors.BLUE, points: t5 }],
+
+    // square capped pieces
+    [
+      { color: Colors.CYAN, points: s1 },
+      { color: Colors.SILVER, points: tr1 },
+      { color: Colors.RED, points: tr2 },
+      { color: Colors.GREEN, points: tr3 },
+      { color: Colors.WHITE, points: tr4 },
+    ],
+    [
+      { color: Colors.TEAL, points: s3 },
+      { color: Colors.BLUE, points: rotateY(tr1) },
+      { color: Colors.SILVER, points: rotateY(tr2) },
+      { color: Colors.WHITE, points: rotateY(tr3) },
+      { color: Colors.ORANGE, points: rotateY(tr4) },
+    ],
+    [
+      { color: Colors.LIGHT_PURPLE, points: s4 },
+      { color: Colors.BLUE, points: rotateX(tr1, 3) },
+      { color: Colors.YELLOW, points: rotateX(tr2, 3) },
+      { color: Colors.RED, points: rotateX(tr3, 3) },
+      { color: Colors.SILVER, points: rotateX(tr4, 3) },
+    ],
+
+    // rotated
+    // cross section
+    [{ color: Colors.LIGHT_BLUE, points: crossSection }],
+    // triangles
+    [{ color: Colors.GREEN, points: t3 }],
+    [{ color: Colors.YELLOW, points: t6 }],
+    [{ color: Colors.PINK, points: t7 }],
+    [{ color: Colors.ORANGE, points: t8 }],
+    [
+      { color: Colors.VIOLET, points: s2 },
+      { color: Colors.WHITE, points: rotateX(tr1) },
+      { color: Colors.GREEN, points: rotateX(tr2) },
+      { color: Colors.PINK, points: rotateX(tr3) },
+      { color: Colors.ORANGE, points: rotateX(tr4) },
+    ],
+    [
+      { color: Colors.SKY_BLUE, points: s5 },
+      { color: Colors.RED, points: rotateY(tr1, 3) },
+      { color: Colors.YELLOW, points: rotateY(tr2, 3) },
+      { color: Colors.PINK, points: rotateY(tr3, 3) },
+      { color: Colors.GREEN, points: rotateY(tr4, 3) },
+    ],
+    [
+      { color: Colors.LIGHT_RED, points: s6 },
+      { color: Colors.YELLOW, points: rotateY(tr1, 2) },
+      { color: Colors.BLUE, points: rotateY(tr2, 2) },
+      { color: Colors.ORANGE, points: rotateY(tr3, 2) },
+      { color: Colors.PINK, points: rotateY(tr4, 2) },
+    ],
+  ].map((facets) => ({ facets: facets }));
 }
 
-function rotateZ(points: Point[]): Point[] {
-  return points.map((p) => [-p[1], p[0], p[2]]);
+function rotatePointX(p: Point): Point {
+  return [p[0], -p[2], p[1]];
 }
 
-function rotateY(points: Point[]): Point[] {
-  return points.map((p) => [p[2], p[1], -p[0]]);
+function rotatePointY(p: Point): Point {
+  return [p[2], p[1], -p[0]];
 }
 
-function rotateX(points: Point[]): Point[] {
-  return points.map((p) => [p[0], -p[2], p[1]]);
+function rotatePointZ(p: Point): Point {
+  return [-p[1], p[0], p[2]];
 }
 
-function rotateOctant1(points: Point[]): Point[] {
-  return points.map((p) => [p[2], p[0], p[1]]);
+function rotatePointOctant1(p: Point): Point {
+  return [p[2], p[0], p[1]];
+}
+
+function rotateX(points: Point[], count: number = 1): Point[] {
+  return points.map((p) => {
+    for (let i = 0; i < count; i++) {
+      p = rotatePointX(p);
+    }
+    return p;
+  });
+}
+
+function rotateY(points: Point[], count: number = 1): Point[] {
+  return points.map((p) => {
+    for (let i = 0; i < count; i++) {
+      p = rotatePointY(p);
+    }
+    return p;
+  });
+}
+
+function rotateZ(points: Point[], count: number = 1): Point[] {
+  return points.map((p) => {
+    for (let i = 0; i < count; i++) {
+      p = rotatePointZ(p);
+    }
+    return p;
+  });
 }
 
 // BLOG: const assertions and DRY unions
