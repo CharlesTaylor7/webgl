@@ -78,21 +78,22 @@ function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
 }
 
 // left hand for camera
-const cameraDirections = {
+const cameraMotions = {
   // wasdqe
   w: "c-x",
-  a: "c+y",
+  a: "c-y",
   s: "c+x",
-  d: "c-y",
+  d: "c+y",
   q: "c+z",
   e: "c-z",
 } as const;
-const cameraKeys = Object.keys(cameraDirections);
+
+const cameraKeys = Object.keys(cameraMotions);
 function isCameraKey(key: string): key is CameraKey {
   return cameraKeys.includes(key);
 }
 
-type Camera = typeof cameraDirections;
+type Camera = typeof cameraMotions;
 type CameraKey = keyof Camera;
 type CameraMotion = Camera[CameraKey];
 
@@ -126,14 +127,34 @@ export function run(gl: WebGLRenderingContext): void {
   const p3 = setVertexColors(gl, p2, colorArray(polygons));
   const p4 = setVertexIndices(gl, p3, indices);
 
+  let activeCameraAxis = vec3.create();
   let cameraRotation = mat4.create();
-  let activeCameraMotion: CameraMotion | null = null;
-
+  //let activeCameraMotion: CameraMotion | null = null;
   const actionBuffer: Action[] = [];
 
   document.onkeydown = (e) => {
     if (isCameraKey(e.key)) {
-      activeCameraMotion = cameraDirections[e.key];
+      const motion = cameraMotions[e.key];
+      if (motion === "c+x") {
+        activeCameraAxis[0] = 1;
+      }
+      if (motion === "c-x") {
+        activeCameraAxis[0] = -1;
+      }
+      if (motion === "c+y") {
+        activeCameraAxis[1] = 1;
+      }
+      if (motion === "c-y") {
+        activeCameraAxis[1] = -1;
+      }
+      if (motion === "c+z") {
+        activeCameraAxis[2] = 1;
+      }
+      if (motion === "c-z") {
+        activeCameraAxis[2] = -1;
+      }
+
+      console.log("axis", JSON.stringify(activeCameraAxis));
     } else if (isActionKey(e.key)) {
       actionBuffer.push(actions[e.key]);
     }
@@ -141,7 +162,16 @@ export function run(gl: WebGLRenderingContext): void {
 
   document.onkeyup = (e) => {
     if (isCameraKey(e.key)) {
-      activeCameraMotion = null;
+      const motion = cameraMotions[e.key];
+      if (motion.endsWith("x")) {
+        activeCameraAxis[0] = 0;
+      }
+      if (motion.endsWith("y")) {
+        activeCameraAxis[1] = 0;
+      }
+      if (motion.endsWith("z")) {
+        activeCameraAxis[2] = 0;
+      }
     }
   };
 
@@ -151,6 +181,7 @@ export function run(gl: WebGLRenderingContext): void {
   // it takes 1.6 seconds to rotate 120 degrees
   let duration = 1600;
   let rotation = (2 * Math.PI) / 3;
+  let __rotate = mat4.create();
 
   function render(ms: number) {
     const action = actionBuffer[0];
@@ -160,11 +191,19 @@ export function run(gl: WebGLRenderingContext): void {
     }
     then = ms;
 
-    if (activeCameraMotion) {
-      rotate(cameraRotation, activeCameraMotion, (rotation * delta) / duration);
+    if (
+      activeCameraAxis[0] !== 0 ||
+      activeCameraAxis[1] !== 0 ||
+      activeCameraAxis[2] !== 0
+    ) {
+      mat4.fromRotation(
+        __rotate,
+        (rotation * delta) / duration,
+        activeCameraAxis,
+      );
+      mat4.multiply(cameraRotation, __rotate, cameraRotation);
     }
 
-    //(rotation * amount) / duration);
     if (frame > duration) {
       actionBuffer.shift();
       frame = 0;
@@ -188,25 +227,6 @@ export function run(gl: WebGLRenderingContext): void {
   }
 
   requestAnimationFrame(render);
-}
-
-let __rotate = mat4.create();
-function rotate(camera: mat4, motion: CameraMotion, amount: number) {
-  if (motion == "c+x") {
-    mat4.fromXRotation(__rotate, amount);
-  } else if (motion == "c-x") {
-    mat4.fromXRotation(__rotate, -amount);
-  } else if (motion == "c+y") {
-    mat4.fromYRotation(__rotate, amount);
-  } else if (motion == "c-y") {
-    mat4.fromYRotation(__rotate, -amount);
-  } else if (motion == "c+z") {
-    mat4.fromZRotation(__rotate, amount);
-  } else if (motion == "c-z") {
-    mat4.fromZRotation(__rotate, -amount);
-  }
-
-  mat4.multiply(camera, __rotate, camera);
 }
 
 function indexPattern(polygons: Polygon[]): Uint16Array {
