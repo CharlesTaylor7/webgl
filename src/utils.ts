@@ -80,6 +80,9 @@ export function getDefaultProjectionMatrix(gl: WebGLRenderingContext): mat4 {
   const zFar = 100.0;
   const projectionMatrix = mat4.create();
   mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+  const t = mat4.create();
+  mat4.fromTranslation(t, [0, 0, -6]);
+  mat4.multiply(projectionMatrix, projectionMatrix, t);
 
   return projectionMatrix;
 }

@@ -127,7 +127,6 @@ export function run(gl: WebGLRenderingContext): void {
   const p4 = setVertexIndices(gl, p3, indices);
 
   let cameraRotation = mat4.create();
-  mat4.translate(cameraRotation, cameraRotation, [0, 0, -6]);
   let activeCameraMotion: CameraMotion | null = null;
 
   const actionBuffer: Action[] = [];
@@ -191,30 +190,23 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
+let __rotate = mat4.create();
 function rotate(camera: mat4, motion: CameraMotion, amount: number) {
   if (motion == "c+x") {
-    mat4.rotateX(camera, camera, amount);
+    mat4.fromXRotation(__rotate, amount);
+  } else if (motion == "c-x") {
+    mat4.fromXRotation(__rotate, -amount);
+  } else if (motion == "c+y") {
+    mat4.fromYRotation(__rotate, amount);
+  } else if (motion == "c-y") {
+    mat4.fromYRotation(__rotate, -amount);
+  } else if (motion == "c+z") {
+    mat4.fromZRotation(__rotate, amount);
+  } else if (motion == "c-z") {
+    mat4.fromZRotation(__rotate, -amount);
   }
 
-  if (motion == "c-x") {
-    mat4.rotateX(camera, camera, -amount);
-  }
-
-  if (motion == "c+y") {
-    mat4.rotateY(camera, camera, amount);
-  }
-
-  if (motion == "c-y") {
-    mat4.rotateY(camera, camera, -amount);
-  }
-
-  if (motion == "c+z") {
-    mat4.rotateZ(camera, camera, amount);
-  }
-
-  if (motion == "c-z") {
-    mat4.rotateZ(camera, camera, -amount);
-  }
+  mat4.multiply(camera, __rotate, camera);
 }
 
 function indexPattern(polygons: Polygon[]): Uint16Array {

@@ -108,7 +108,7 @@ export function setVertexColors<K>(
 ): ShaderProgramNeeds<Exclude<K, "vertexColor">> {
   const buffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
 
   const attributeIndex = gl.getAttribLocation(program, "vertexColor");
   const numComponents = 4;
