@@ -22,6 +22,7 @@ import {
 TODO:
 - [x] rotate camera with keyboard controls
 - [x] animate camera
+- [ ] hold keys to rotate camera instead of buffered actions
 - [ ] outlines or gaps between pieces
 - [ ] lighting
 - [ ] less harsh background
@@ -76,8 +77,8 @@ function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
   return new Float32Array(positions);
 }
 
-const actions = {
-  // left hand for camera
+// left hand for camera
+const cameraDirections = {
   // wasdqe
   w: "c-x",
   a: "c+y",
@@ -85,8 +86,18 @@ const actions = {
   d: "c-y",
   q: "c+z",
   e: "c-z",
+} as const;
+const cameraKeys = Object.keys(cameraDirections);
+function isCameraKey(key: string): key is CameraKey {
+  return cameraKeys.includes(key);
+}
 
-  // right hand for rotations
+type Camera = typeof cameraDirections;
+type CameraKey = keyof Camera;
+type CameraMotion = Camera[CameraKey];
+
+// right hand for rotations
+const actions = {
   // ijkluo
   i: "r-x",
   j: "r+y",
@@ -95,14 +106,14 @@ const actions = {
   u: "r+z",
   o: "r-z",
 } as const;
-const keys = Object.keys(actions);
+const actionKeys = Object.keys(actions);
 
-function isHotKey(key: string): key is HotKey {
-  return keys.includes(key);
+function isActionKey(key: string): key is ActionKey {
+  return actionKeys.includes(key);
 }
 type Actions = typeof actions;
-type HotKey = keyof Actions;
-type Action = Actions[HotKey];
+type ActionKey = keyof Actions;
+type Action = Actions[ActionKey];
 "r-x" satisfies Action;
 
 export function run(gl: WebGLRenderingContext): void {
@@ -117,11 +128,21 @@ export function run(gl: WebGLRenderingContext): void {
 
   let cameraRotation = mat4.create();
   mat4.translate(cameraRotation, cameraRotation, [0, 0, -6]);
+  let activeCameraMotion: CameraMotion | null = null;
 
   const actionBuffer: Action[] = [];
+
   document.onkeydown = (e) => {
-    if (isHotKey(e.key)) {
+    if (isCameraKey(e.key)) {
+      activeCameraMotion = cameraDirections[e.key];
+    } else if (isActionKey(e.key)) {
       actionBuffer.push(actions[e.key]);
+    }
+  };
+
+  document.onkeyup = (e) => {
+    if (isCameraKey(e.key)) {
+      activeCameraMotion = null;
     }
   };
 
@@ -133,14 +154,14 @@ export function run(gl: WebGLRenderingContext): void {
 
   function render(ms: number) {
     const action = actionBuffer[0];
+    delta = ms - then;
     if (action) {
-      delta = ms - then;
       frame += delta;
     }
     then = ms;
 
-    if (action && action.startsWith("c")) {
-      rotate(cameraRotation, action, (rotation * delta) / duration);
+    if (activeCameraMotion) {
+      rotate(cameraRotation, activeCameraMotion, (rotation * delta) / duration);
     }
 
     //(rotation * amount) / duration);
@@ -155,7 +176,7 @@ export function run(gl: WebGLRenderingContext): void {
     drawElements(gl, p5, gl.TRIANGLES, 0, indices.length / 2);
 
     const rotationMatrix = mat4.create();
-    if (action && action.startsWith("r")) {
+    if (action) {
       mat4.fromRotation(rotationMatrix, frame / duration, [1, 1, 1]);
     }
     mat4.multiply(rotationMatrix, cameraRotation, rotationMatrix);
@@ -169,28 +190,28 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
-function rotate(camera: mat4, action: Action, amount: number) {
-  if (action == "c+x") {
+function rotate(camera: mat4, motion: CameraMotion, amount: number) {
+  if (motion == "c+x") {
     mat4.rotateX(camera, camera, amount);
   }
 
-  if (action == "c-x") {
+  if (motion == "c-x") {
     mat4.rotateX(camera, camera, -amount);
   }
 
-  if (action == "c+y") {
+  if (motion == "c+y") {
     mat4.rotateY(camera, camera, amount);
   }
 
-  if (action == "c-y") {
+  if (motion == "c-y") {
     mat4.rotateY(camera, camera, -amount);
   }
 
-  if (action == "c+z") {
+  if (motion == "c+z") {
     mat4.rotateZ(camera, camera, amount);
   }
 
-  if (action == "c-z") {
+  if (motion == "c-z") {
     mat4.rotateZ(camera, camera, -amount);
   }
 }
@@ -230,7 +251,7 @@ function initPieces(): Piece[] {
   let a = 1.5;
   let b = Math.sqrt(2) / 2;
   let c = (a + b) / 2;
-  let d = b / 2;
+  // let d = b / 2;
 
   // triangles
   const t1: Point[] = [
@@ -357,9 +378,11 @@ function rotatePointZ(p: Point): Point {
   return [-p[1], p[0], p[2]];
 }
 
+/*
 function rotatePointOctant1(p: Point): Point {
   return [p[2], p[0], p[1]];
 }
+*/
 
 function rotateX(points: Point[], count: number = 1): Point[] {
   return points.map((p) => {
