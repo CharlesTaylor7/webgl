@@ -4,7 +4,6 @@ import {
   rgb,
   clearScene,
   getDefaultProjectionMatrix,
-  randomColor,
   resizeToScreen,
 } from "../utils";
 
@@ -35,16 +34,11 @@ TODO:
   - [ ] permute colors instead of positions
 */
 type Polygon = {
-  tag?: Tag;
-  color: Color;
+  tag: ColorKey;
   points: Point[];
 };
 
-// triangle, square or octagonal cross section
-type Tag =
-  | `t${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
-  | `s${1 | 2 | 3 | 4 | 5 | 6}`
-  | "o1";
+type Permutation = Record<number, number>;
 
 type Piece = {
   facets: Polygon[];
@@ -72,6 +66,66 @@ const Colors = {
   ORANGE: rgb(235, 135, 21),
 } as const;
 Colors satisfies Record<string, Color>;
+type ColorKey = keyof typeof Colors;
+
+const initialFacetColors: Color[] = [
+  // cross section
+  Colors.LIGHT_GREEN,
+  // triangles
+  Colors.SILVER,
+  Colors.REDDISH_PINK,
+  Colors.LIGHT_BLUE,
+  Colors.BLUE,
+
+  // square
+  Colors.CYAN,
+  Colors.SILVER,
+  Colors.REDDISH_PINK,
+  Colors.GREEN,
+  Colors.LIGHT_BLUE,
+  // square
+  Colors.TEAL,
+  Colors.BLUE,
+  Colors.SILVER,
+  Colors.LIGHT_BLUE,
+  Colors.ORANGE,
+
+  // square
+  Colors.LIGHT_PURPLE,
+  Colors.BLUE,
+  Colors.YELLOW,
+  Colors.REDDISH_PINK,
+  Colors.SILVER,
+
+  // cross section
+  Colors.LIGHT_GREEN,
+  // triangles
+  Colors.GREEN,
+  Colors.YELLOW,
+  Colors.PINK,
+  Colors.ORANGE,
+
+  // square
+  Colors.VIOLET,
+  Colors.LIGHT_BLUE,
+  Colors.GREEN,
+  Colors.PINK,
+  Colors.ORANGE,
+
+  // square
+  Colors.SKY_BLUE,
+  Colors.REDDISH_PINK,
+  Colors.YELLOW,
+  Colors.PINK,
+  Colors.GREEN,
+
+  // square
+  Colors.LIGHT_RED,
+  Colors.YELLOW,
+  Colors.BLUE,
+  Colors.ORANGE,
+  Colors.PINK,
+];
 
 function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
   const positions = [];
@@ -81,6 +135,10 @@ function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
     }
   }
   return new Float32Array(positions);
+}
+
+function identityPermutation(): Permutation {
+  return {} as Permutation;
 }
 
 // left hand for camera
@@ -120,17 +178,30 @@ type ActionKey = keyof Actions;
 type Action = Actions[ActionKey];
 
 export function run(gl: WebGLRenderingContext): void {
+  // setup
   const pieces = initPieces();
   const polygons = pieces.flatMap((p) => p.facets);
   const indices = indexPattern(polygons);
   const p0 = default3DShaderProgram(gl);
   const p1 = setVertexPositions(gl, p0, polygonsToPositions(polygons));
-  const p2 = setVertexColors(gl, p1, colorArray(polygons));
-  const p3 = setVertexIndices(gl, p2, indices);
+  const p2 = setVertexIndices(gl, p1, indices);
+  const p3 = setVertexColors(gl, p2, colorArray(polygons));
 
+  // it takes 1.6 seconds to rotate 120 degrees
+  const duration = 1600;
+  const rotation = (2 * Math.PI) / 3;
+
+  // state
   let activeCameraAxis = vec3.create();
   let cameraRotation = mat4.create();
   const actionBuffer: Action[] = [];
+
+  let permutation: Permutation = identityPermutation();
+
+  let then = 0;
+  let frame = 0;
+  let delta = 0;
+  let __rotate = mat4.create();
 
   document.onkeydown = (e) => {
     if (isCameraKey(e.key)) {
@@ -172,15 +243,6 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
   };
-
-  let then = 0;
-  let frame = 0;
-  let delta = 0;
-  // it takes 1.6 seconds to rotate 120 degrees
-  let duration = 1600;
-  let rotation = (2 * Math.PI) / 3;
-  let __rotate = mat4.create();
-
   function render(ms: number) {
     let action: Action | undefined = actionBuffer[0];
     delta = ms - then;
@@ -190,6 +252,7 @@ export function run(gl: WebGLRenderingContext): void {
         actionBuffer.shift();
         frame = 0;
         // TODO: apply rotation now
+        setVertexColors(gl, p1, colorArray(polygons, permutation));
         action = undefined;
       }
     }
@@ -239,16 +302,22 @@ function indexPattern(polygons: Polygon[]): Uint16Array {
   return new Uint16Array(indices);
 }
 
+/*
 function tap(x: any): any {
   console.log(JSON.stringify(x));
   return x;
 }
-function colorArray(polygons: Polygon[]): Float32Array {
+*/
+function colorArray(
+  polygons: Polygon[],
+  permutation?: Permutation,
+): Float32Array {
   const data: number[] = [];
 
-  for (let p of polygons) {
-    const c = p.color || tap(randomColor());
-    for (let k = 0; k < p.points.length; k++) {
+  for (let i = 0; i < polygons.length; i++) {
+    const j = permutation ? permutation[i] ?? i : i;
+    const c = initialFacetColors[j];
+    for (let k = 0; k < polygons[i].points.length; k++) {
       data.push(...c);
     }
   }
@@ -287,7 +356,7 @@ function initPieces(): Piece[] {
   const tr3 = rotateZ(tr2);
   const tr4 = rotateZ(tr3);
 
-  const crossSection = (
+  const h1 = (
     [
       [c, 0, c],
       [0, -c, c],
@@ -310,67 +379,69 @@ function initPieces(): Piece[] {
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
 
+  const polygon = (tag: ColorKey, points: Point[]) => ({ tag, points });
+
   return [
     // stationary
     // cross section
-    [{ color: Colors.LIGHT_GREEN, points: crossSection }],
+    [polygon("LIGHT_GREEN", h1)],
     // triangles
-    [{ color: Colors.SILVER, points: t1 }],
-    [{ color: Colors.REDDISH_PINK, points: t2 }],
-    [{ color: Colors.LIGHT_BLUE, points: t4 }],
-    [{ color: Colors.BLUE, points: t5 }],
+    [polygon("SILVER", t1)],
+    [polygon("REDDISH_PINK", t2)],
+    [polygon("LIGHT_BLUE", t4)],
+    [polygon("BLUE", t5)],
 
     // square capped pieces
     [
-      { color: Colors.CYAN, points: s1 },
-      { color: Colors.SILVER, points: tr1 },
-      { color: Colors.REDDISH_PINK, points: tr2 },
-      { color: Colors.GREEN, points: tr3 },
-      { color: Colors.LIGHT_BLUE, points: tr4 },
+      polygon("CYAN", s1),
+      polygon("SILVER", tr1),
+      polygon("REDDISH_PINK", tr2),
+      polygon("GREEN", tr3),
+      polygon("LIGHT_BLUE", tr4),
     ],
     [
-      { color: Colors.TEAL, points: s3 },
-      { color: Colors.BLUE, points: rotateY(tr1) },
-      { color: Colors.SILVER, points: rotateY(tr2) },
-      { color: Colors.LIGHT_BLUE, points: rotateY(tr3) },
-      { color: Colors.ORANGE, points: rotateY(tr4) },
+      polygon("TEAL", s3),
+      polygon("BLUE", rotateY(tr1)),
+      polygon("SILVER", rotateY(tr2)),
+      polygon("LIGHT_BLUE", rotateY(tr3)),
+      polygon("ORANGE", rotateY(tr4)),
     ],
     [
-      { color: Colors.LIGHT_PURPLE, points: s4 },
-      { color: Colors.BLUE, points: rotateX(tr1, 3) },
-      { color: Colors.YELLOW, points: rotateX(tr2, 3) },
-      { color: Colors.REDDISH_PINK, points: rotateX(tr3, 3) },
-      { color: Colors.SILVER, points: rotateX(tr4, 3) },
+      polygon("LIGHT_PURPLE", s4),
+      polygon("BLUE", rotateX(tr1, 3)),
+      polygon("YELLOW", rotateX(tr2, 3)),
+      polygon("REDDISH_PINK", rotateX(tr3, 3)),
+      polygon("SILVER", rotateX(tr4, 3)),
     ],
 
     // rotated
     // cross section
-    [{ color: Colors.LIGHT_GREEN, points: crossSection }],
+    [polygon("LIGHT_GREEN", h1)],
     // triangles
-    [{ color: Colors.GREEN, points: t3 }],
-    [{ color: Colors.YELLOW, points: t6 }],
-    [{ color: Colors.PINK, points: t7 }],
-    [{ color: Colors.ORANGE, points: t8 }],
+    [polygon("GREEN", t3)],
+    [polygon("YELLOW", t6)],
+    [polygon("PINK", t7)],
+    [polygon("ORANGE", t8)],
     [
-      { color: Colors.VIOLET, points: s2 },
-      { color: Colors.LIGHT_BLUE, points: rotateX(tr1) },
-      { color: Colors.GREEN, points: rotateX(tr2) },
-      { color: Colors.PINK, points: rotateX(tr3) },
-      { color: Colors.ORANGE, points: rotateX(tr4) },
+      polygon("VIOLET", s2),
+      polygon("LIGHT_BLUE", rotateX(tr1)),
+      polygon("GREEN", rotateX(tr2)),
+      polygon("PINK", rotateX(tr3)),
+      polygon("ORANGE", rotateX(tr4)),
     ],
     [
-      { color: Colors.SKY_BLUE, points: s5 },
-      { color: Colors.REDDISH_PINK, points: rotateY(tr1, 3) },
-      { color: Colors.YELLOW, points: rotateY(tr2, 3) },
-      { color: Colors.PINK, points: rotateY(tr3, 3) },
-      { color: Colors.GREEN, points: rotateY(tr4, 3) },
+      polygon("SKY_BLUE", s5),
+      polygon("REDDISH_PINK", rotateY(tr1, 3)),
+      polygon("YELLOW", rotateY(tr2, 3)),
+      polygon("PINK", rotateY(tr3, 3)),
+      polygon("GREEN", rotateY(tr4, 3)),
     ],
     [
-      { color: Colors.LIGHT_RED, points: s6 },
-      { color: Colors.YELLOW, points: rotateY(tr1, 2) },
-      { color: Colors.BLUE, points: rotateY(tr2, 2) },
-      { color: Colors.ORANGE, points: rotateY(tr3, 2) },
-      { color: Colors.PINK, points: rotateY(tr4, 2) },
+      polygon("LIGHT_RED", s6),
+      polygon("YELLOW", rotateY(tr1, 2)),
+      polygon("BLUE", rotateY(tr2, 2)),
+      polygon("ORANGE", rotateY(tr3, 2)),
+      polygon("PINK", rotateY(tr4, 2)),
     ],
   ].map((facets) => ({ facets: facets }));
 }
