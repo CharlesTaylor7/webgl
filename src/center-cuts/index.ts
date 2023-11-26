@@ -35,9 +35,17 @@ TODO:
   - [ ] permute colors instead of positions
 */
 type Polygon = {
+  tag?: Tag;
   color: Color;
   points: Point[];
 };
+
+// triangle, square or octagonal cross section
+type Tag =
+  | `t${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | `s${1 | 2 | 3 | 4 | 5 | 6}`
+  | "o1";
+
 type Piece = {
   facets: Polygon[];
 };
@@ -147,7 +155,6 @@ export function run(gl: WebGLRenderingContext): void {
       }
     } else if (isActionKey(e.key)) {
       actionBuffer.push(actions[e.key]);
-      console.log(actionBuffer);
     }
   };
 
