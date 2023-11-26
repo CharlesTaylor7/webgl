@@ -25,29 +25,33 @@ TODO:
 - [ ] lighting
 - [ ] less harsh background
 - [ ] hot key to reset the camera to default orientation
+- [ ] Organize modules for default export 
 - [ ] rotate slices with keyboard controls 
   - [x] fix colors
   - [x] draw half the puzzle
   - [x] draw arrays in two passes
   - [x] animate
-  - [x] permute colors instead of positions
-  - [ ] rotate camera and puzzle at independent speeds
+  - [x] rotate camera and puzzle at independent speeds
+  - [x] Remove type safe builder pattern
+  - [ ] permute positons instead of colors
   -
 */
 type Polygon = {
-  tag: ColorName;
+  color: ColorName;
+  tag: FacetTag;
   points: Point[];
 };
 
-type Permutation = Record<number, number>;
-
+type TriangleTag = `t${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`;
 type PieceTag =
   // triangle center
-  | `t${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | TriangleTag
   // square cap
   | `s${1 | 2 | 3 | 4 | 5 | 6}`
   // hexagonal cross section
   | `h${1 | 2}`;
+
+type FacetTag = PieceTag | `tr-${1 | 2 | 3 | 4 | 5 | 6}-${1 | 2 | 3 | 4}`;
 
 type Piece = {
   tag: PieceTag;
@@ -55,7 +59,7 @@ type Piece = {
 };
 type Point = vec3;
 
-const Colors = {
+const colors = {
   PINK: rgb(237, 47, 234),
   SILVER: rgb(143, 143, 143),
   BLUE_VIOLET: [0.47, 0.6, 0.99, 1] as Color,
@@ -75,67 +79,8 @@ const Colors = {
   GREEN: rgb(14, 82, 17),
   ORANGE: rgb(235, 135, 21),
 } as const;
-Colors satisfies Record<string, Color>;
-type ColorName = keyof typeof Colors;
-
-const initialFacetColors: Color[] = [
-  // cross section
-  Colors.LIGHT_GREEN,
-  // triangles
-  Colors.SILVER,
-  Colors.REDDISH_PINK,
-  Colors.LIGHT_BLUE,
-  Colors.BLUE,
-
-  // square
-  Colors.CYAN,
-  Colors.SILVER,
-  Colors.REDDISH_PINK,
-  Colors.GREEN,
-  Colors.LIGHT_BLUE,
-  // square
-  Colors.TEAL,
-  Colors.BLUE,
-  Colors.SILVER,
-  Colors.LIGHT_BLUE,
-  Colors.ORANGE,
-
-  // square
-  Colors.LIGHT_PURPLE,
-  Colors.BLUE,
-  Colors.YELLOW,
-  Colors.REDDISH_PINK,
-  Colors.SILVER,
-
-  // cross section
-  Colors.LIGHT_GREEN,
-  // triangles
-  Colors.GREEN,
-  Colors.YELLOW,
-  Colors.PINK,
-  Colors.ORANGE,
-
-  // square
-  Colors.VIOLET,
-  Colors.LIGHT_BLUE,
-  Colors.GREEN,
-  Colors.PINK,
-  Colors.ORANGE,
-
-  // square
-  Colors.SKY_BLUE,
-  Colors.REDDISH_PINK,
-  Colors.YELLOW,
-  Colors.PINK,
-  Colors.GREEN,
-
-  // square
-  Colors.LIGHT_RED,
-  Colors.YELLOW,
-  Colors.BLUE,
-  Colors.ORANGE,
-  Colors.PINK,
-];
+colors satisfies Record<string, Color>;
+type ColorName = keyof typeof colors;
 
 function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
   const positions = [];
@@ -145,10 +90,6 @@ function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
     }
   }
   return new Float32Array(positions);
-}
-
-function identityPermutation(): Permutation {
-  return {} as Permutation;
 }
 
 // left hand for camera
@@ -192,10 +133,10 @@ export function run(gl: WebGLRenderingContext): void {
   const pieces = initPieces();
   const polygons = pieces.flatMap((p) => p.facets);
   const indices = indexPattern(polygons);
-  const p0 = default3DShaderProgram(gl);
-  const p1 = setVertexPositions(gl, p0, polygonsToPositions(polygons));
-  const p2 = setVertexIndices(gl, p1, indices);
-  const p3 = setVertexColors(gl, p2, colorArray(polygons));
+  const program = default3DShaderProgram(gl);
+  setVertexIndices(gl, indices);
+  setVertexColors(gl, program, colorArray(polygons));
+  setVertexPositions(gl, program, polygonsToPositions(polygons));
 
   // it takes 1.6 seconds to rotate 120 degrees
   const cameraSpeed = (2 * Math.PI) / (3 * 1600);
@@ -208,8 +149,6 @@ export function run(gl: WebGLRenderingContext): void {
   const cameraRotation = mat4.create();
   const puzzleRotation = mat4.create();
   const actionBuffer: Action[] = [];
-
-  let permutation: Permutation = identityPermutation();
 
   let then = 0;
   let frame = 0;
@@ -264,11 +203,6 @@ export function run(gl: WebGLRenderingContext): void {
       if (frame > duration) {
         actionBuffer.shift();
         frame = 0;
-        // TODO: apply rotation now
-        permCycle(permutation, 2, 4, 3);
-        permCycle(permutation, 5, 15, 10);
-        permCycle(permutation, 7, 13);
-        setVertexColors(gl, p1, colorArray(polygons, permutation));
         action = undefined;
       }
     }
@@ -283,8 +217,8 @@ export function run(gl: WebGLRenderingContext): void {
     clearScene(gl);
     getDefaultProjectionMatrix(gl, transform);
     mat4.multiply(transform, transform, cameraRotation);
-    let p4 = setTransformMatrix(gl, p3, transform);
-    drawElements(gl, p4, gl.TRIANGLES, indices.length / 2, indices.length / 2);
+    setTransformMatrix(gl, program, transform);
+    drawElements(gl, gl.TRIANGLES, indices.length / 2, indices.length / 2);
 
     if (action) {
       mat4.fromRotation(
@@ -295,8 +229,8 @@ export function run(gl: WebGLRenderingContext): void {
       mat4.multiply(transform, transform, puzzleRotation);
     }
 
-    p4 = setTransformMatrix(gl, p3, transform);
-    drawElements(gl, p4, gl.TRIANGLES, 0, indices.length / 2);
+    setTransformMatrix(gl, program, transform);
+    drawElements(gl, gl.TRIANGLES, 0, indices.length / 2);
 
     requestAnimationFrame(render);
   }
@@ -324,18 +258,11 @@ function tap(x: any): any {
   return x;
 }
 */
-function colorArray(
-  polygons: Polygon[],
-  permutation?: Permutation,
-): Float32Array {
+function colorArray(polygons: Polygon[]): Float32Array {
   const data: number[] = [];
 
   for (let i = 0; i < polygons.length; i++) {
-    const j = permutation ? permutation[i] ?? i : i;
-    if (i !== j) {
-      console.log(i, j);
-    }
-    const c = initialFacetColors[j];
+    const c = colors[polygons[i].color];
     for (let k = 0; k < polygons[i].points.length; k++) {
       data.push(...c);
     }
@@ -399,75 +326,84 @@ function initPieces(): Piece[] {
   const s6 = rotateX(s2);
 
   const piece = (tag: PieceTag, ...facets: Polygon[]) => ({ tag, facets });
-  const polygon = (tag: ColorName, points: Point[]) => ({ tag, points });
+  const polygon = (
+    color: ColorName,
+    tag: FacetTag,
+    points: Point[],
+  ): Polygon => ({
+    color,
+    tag,
+    points,
+  });
 
   return [
     // moving
     // cross section
-    piece("h1", polygon("LIGHT_GREEN", h1)),
+    piece("h1", polygon("LIGHT_GREEN", "h1", h1)),
+
     // triangles
-    piece("t1", polygon("SILVER", t1)),
-    piece("t2", polygon("REDDISH_PINK", t2)),
-    piece("t3", polygon("LIGHT_BLUE", t4)),
-    piece("t4", polygon("BLUE", t5)),
+    piece("t1", polygon("SILVER", "t1", t1)),
+    piece("t2", polygon("REDDISH_PINK", "t2", t2)),
+    piece("t3", polygon("LIGHT_BLUE", "t3", t4)),
+    piece("t4", polygon("BLUE", "t4", t5)),
 
     // square capped pieces
     piece(
       "s1",
-      polygon("CYAN", s1),
-      polygon("SILVER", tr1),
-      polygon("REDDISH_PINK", tr2),
-      polygon("GREEN", tr3),
-      polygon("LIGHT_BLUE", tr4),
+      polygon("CYAN", "s1", s1),
+      polygon("SILVER", "tr-1-1", tr1),
+      polygon("REDDISH_PINK", "tr-1-2", tr2),
+      polygon("GREEN", "tr-1-3", tr3),
+      polygon("LIGHT_BLUE", "tr-1-4", tr4),
     ),
     piece(
       "s2",
-      polygon("TEAL", s3),
-      polygon("BLUE", rotateY(tr1)),
-      polygon("SILVER", rotateY(tr2)),
-      polygon("LIGHT_BLUE", rotateY(tr3)),
-      polygon("ORANGE", rotateY(tr4)),
+      polygon("TEAL", "s2", s3),
+      polygon("BLUE", "tr-2-1", rotateY(tr1)),
+      polygon("SILVER", "tr-2-2", rotateY(tr2)),
+      polygon("LIGHT_BLUE", "tr-2-3", rotateY(tr3)),
+      polygon("ORANGE", "tr-2-4", rotateY(tr4)),
     ),
     piece(
       "s3",
-      polygon("LIGHT_PURPLE", s4),
-      polygon("BLUE", rotateX(tr1, 3)),
-      polygon("YELLOW", rotateX(tr2, 3)),
-      polygon("REDDISH_PINK", rotateX(tr3, 3)),
-      polygon("SILVER", rotateX(tr4, 3)),
+      polygon("LIGHT_PURPLE", "s3", s4),
+      polygon("BLUE", "tr-3-1", rotateX(tr1, 3)),
+      polygon("YELLOW", "tr-3-2", rotateX(tr2, 3)),
+      polygon("REDDISH_PINK", "tr-3-3", rotateX(tr3, 3)),
+      polygon("SILVER", "tr-3-4", rotateX(tr4, 3)),
     ),
 
     // stationary
     // cross section
-    piece("h2", polygon("LIGHT_GREEN", h1)),
+    piece("h2", polygon("LIGHT_GREEN", "h2", h1)),
     // triangles
-    piece("t5", polygon("GREEN", t3)),
-    piece("t6", polygon("YELLOW", t6)),
-    piece("t7", polygon("PINK", t7)),
-    piece("t8", polygon("ORANGE", t8)),
+    piece("t5", polygon("GREEN", "t5", t3)),
+    piece("t6", polygon("YELLOW", "t6", t6)),
+    piece("t7", polygon("PINK", "t7", t7)),
+    piece("t8", polygon("ORANGE", "t8", t8)),
     piece(
       "s4",
-      polygon("VIOLET", s2),
-      polygon("LIGHT_BLUE", rotateX(tr1)),
-      polygon("GREEN", rotateX(tr2)),
-      polygon("PINK", rotateX(tr3)),
-      polygon("ORANGE", rotateX(tr4)),
+      polygon("VIOLET", "s4", s2),
+      polygon("LIGHT_BLUE", "tr-4-1", rotateX(tr1)),
+      polygon("GREEN", "tr-4-2", rotateX(tr2)),
+      polygon("PINK", "tr-4-3", rotateX(tr3)),
+      polygon("ORANGE", "tr-4-4", rotateX(tr4)),
     ),
     piece(
       "s5",
-      polygon("SKY_BLUE", s5),
-      polygon("REDDISH_PINK", rotateY(tr1, 3)),
-      polygon("YELLOW", rotateY(tr2, 3)),
-      polygon("PINK", rotateY(tr3, 3)),
-      polygon("GREEN", rotateY(tr4, 3)),
+      polygon("SKY_BLUE", "s5", s5),
+      polygon("REDDISH_PINK", "tr-5-1", rotateY(tr1, 3)),
+      polygon("YELLOW", "tr-5-2", rotateY(tr2, 3)),
+      polygon("PINK", "tr-5-3", rotateY(tr3, 3)),
+      polygon("GREEN", "tr-5-4", rotateY(tr4, 3)),
     ),
     piece(
       "s6",
-      polygon("LIGHT_RED", s6),
-      polygon("YELLOW", rotateY(tr1, 2)),
-      polygon("BLUE", rotateY(tr2, 2)),
-      polygon("ORANGE", rotateY(tr3, 2)),
-      polygon("PINK", rotateY(tr4, 2)),
+      polygon("LIGHT_RED", "s6", s6),
+      polygon("YELLOW", "tr-6-1", rotateY(tr1, 2)),
+      polygon("BLUE", "tr-6-2", rotateY(tr2, 2)),
+      polygon("ORANGE", "tr-6-3", rotateY(tr3, 2)),
+      polygon("PINK", "tr-6-4", rotateY(tr4, 2)),
     ),
   ];
 }
@@ -523,12 +459,14 @@ function rotateAxis1(): Permutation {
 }
 */
 
+/*
 function permCycle(perm: Permutation, ...items: number[]): void {
   for (let i = 0; i < items.length - 1; i++) {
     perm[items[i]] = items[i + 1];
   }
   perm[items[items.length - 1]] = items[0];
 }
+*/
 // BLOG: const assertions and DRY unions
 // how to have a typed union based on an array literal:
 /*

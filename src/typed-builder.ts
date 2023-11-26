@@ -1,11 +1,6 @@
 import { mat4 } from "gl-matrix";
 import { initShaderProgram } from "./utils";
 
-declare const __brand: unique symbol;
-export type Branded<T, B> = T & { [__brand]: B };
-
-type ShaderProgramNeeds<Keys> = Branded<WebGLProgram, Keys>;
-
 const default3DVertexShader = `
   attribute vec4 vertexPosition;
   attribute vec4 vertexColor;
@@ -28,24 +23,8 @@ const default3DFragmentShader = `
   }
 `;
 
-export function setVertexIndices<K>(
-  gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
-  indices: Uint16Array,
-  usage: GLenum = gl.STATIC_DRAW,
-): ShaderProgramNeeds<Exclude<K, "vertexIndices">> {
-  const buffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, usage);
-
-  // @ts-ignore
-  return program;
-}
-
 export function drawElements(
   gl: WebGLRenderingContext,
-  // @ts-ignore
-  program: ShaderProgramNeeds<never>,
   mode: GLenum,
   offset: number,
   count: number,
@@ -55,26 +34,18 @@ export function drawElements(
 
 export function default3DShaderProgram(
   gl: WebGLRenderingContext,
-): ShaderProgramNeeds<
-  | "vertexPosition"
-  | "vertexColor"
-  | "vertexIndices"
-  | "transformMatrix"
-> {
-  const program: WebGLProgram = initShaderProgram(gl, {
+): WebGLProgram {
+  return initShaderProgram(gl, {
     vertex: default3DVertexShader,
     fragment: default3DFragmentShader,
   });
-
-  // @ts-ignore
-  return program;
 }
 
-export function setVertexPositions<K>(
+export function setVertexPositions(
   gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
+  program: WebGLProgram,
   positions: Float32Array,
-): ShaderProgramNeeds<Exclude<K, "vertexPosition">> {
+) {
   const buffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
@@ -94,16 +65,23 @@ export function setVertexPositions<K>(
     offset,
   );
   gl.enableVertexAttribArray(attributeIndex);
-
-  // @ts-ignore
-  return program;
 }
 
-export function setVertexColors<K>(
+export function setVertexIndices(
   gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
+  indices: Uint16Array,
+  usage: GLenum = gl.STATIC_DRAW,
+) {
+  const buffer = gl.createBuffer()!;
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, usage);
+}
+
+export function setVertexColors(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram,
   colors: Float32Array,
-): ShaderProgramNeeds<Exclude<K, "vertexColor">> {
+) {
   const buffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
@@ -123,21 +101,16 @@ export function setVertexColors<K>(
     offset,
   );
   gl.enableVertexAttribArray(attributeIndex);
-
-  // @ts-ignore
-  return program;
 }
 
-export function setTransformMatrix<K>(
+export function setTransformMatrix(
   gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
+  program: WebGLProgram,
   matrix: mat4,
-): ShaderProgramNeeds<Exclude<K, "transformMatrix">> {
+) {
   gl.uniformMatrix4fv(
     gl.getUniformLocation(program, "transformMatrix"),
     false,
     matrix,
   );
-  // @ts-ignore
-  return program;
 }
