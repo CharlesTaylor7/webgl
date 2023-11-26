@@ -146,6 +146,7 @@ export function run(gl: WebGLRenderingContext): void {
 
   // state
   let activeCameraAxis = vec3.create();
+  let activeRotationAxis = vec3.create();
   const cameraRotation = mat4.create();
   const puzzleRotation = mat4.create();
   const actionBuffer: Action[] = [];
@@ -201,8 +202,17 @@ export function run(gl: WebGLRenderingContext): void {
     if (action) {
       frame += delta;
       if (frame > duration) {
-        actionBuffer.shift();
+        console.log(actionBuffer.shift());
         frame = 0;
+        // TODO rotate
+        //mat4.fromRotation(puzzleRotation, (2 * Math.PI) / 3, [1, 1, 1]);
+
+        for (let i = 0; i < polygons.length / 2; i++) {
+          const p = polygons[i];
+          p.points = p.points.map(rotatePointOctant1);
+        }
+        setVertexPositions(gl, program, polygonsToPositions(polygons));
+
         action = undefined;
       }
     }
@@ -284,10 +294,10 @@ function initPieces(): Piece[] {
     [c, c, 0],
   ];
   const t2 = rotateZ(t1);
-  const t3 = rotateZ(t2);
-  const t4 = rotateZ(t3);
-  const t5 = rotateY(t1);
-  const t6 = rotateZ(t5);
+  const t5 = rotateZ(t2);
+  const t3 = rotateZ(t5);
+  const t4 = rotateY(t1);
+  const t6 = rotateZ(t4);
   const t7 = rotateZ(t6);
   const t8 = rotateZ(t7);
 
@@ -344,8 +354,8 @@ function initPieces(): Piece[] {
     // triangles
     piece("t1", polygon("SILVER", "t1", t1)),
     piece("t2", polygon("REDDISH_PINK", "t2", t2)),
-    piece("t3", polygon("LIGHT_BLUE", "t3", t4)),
-    piece("t4", polygon("BLUE", "t4", t5)),
+    piece("t3", polygon("LIGHT_BLUE", "t3", t3)),
+    piece("t4", polygon("BLUE", "t4", t4)),
 
     // square capped pieces
     piece(
@@ -377,7 +387,7 @@ function initPieces(): Piece[] {
     // cross section
     piece("h2", polygon("LIGHT_GREEN", "h2", h1)),
     // triangles
-    piece("t5", polygon("GREEN", "t5", t3)),
+    piece("t5", polygon("GREEN", "t5", t5)),
     piece("t6", polygon("YELLOW", "t6", t6)),
     piece("t7", polygon("PINK", "t7", t7)),
     piece("t8", polygon("ORANGE", "t8", t8)),
@@ -420,11 +430,9 @@ function rotatePointZ(p: Point): Point {
   return [-p[1], p[0], p[2]];
 }
 
-/*
 function rotatePointOctant1(p: Point): Point {
   return [p[2], p[0], p[1]];
 }
-*/
 
 function rotateX(points: Point[], count: number = 1): Point[] {
   return points.map((p) => {
