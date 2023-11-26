@@ -34,7 +34,7 @@ TODO:
   - [ ] permute colors instead of positions
 */
 type Polygon = {
-  tag: ColorKey;
+  tag: ColorName;
   points: Point[];
 };
 
@@ -75,7 +75,7 @@ const Colors = {
   ORANGE: rgb(235, 135, 21),
 } as const;
 Colors satisfies Record<string, Color>;
-type ColorKey = keyof typeof Colors;
+type ColorName = keyof typeof Colors;
 
 const initialFacetColors: Color[] = [
   // cross section
@@ -261,6 +261,7 @@ export function run(gl: WebGLRenderingContext): void {
         actionBuffer.shift();
         frame = 0;
         // TODO: apply rotation now
+        permutation = permCycle(1, 2);
         setVertexColors(gl, p1, colorArray(polygons, permutation));
         action = undefined;
       }
@@ -325,6 +326,7 @@ function colorArray(
 
   for (let i = 0; i < polygons.length; i++) {
     const j = permutation ? permutation[i] ?? i : i;
+    console.log(i, j);
     const c = initialFacetColors[j];
     for (let k = 0; k < polygons[i].points.length; k++) {
       data.push(...c);
@@ -389,7 +391,7 @@ function initPieces(): Piece[] {
   const s6 = rotateX(s2);
 
   const piece = (tag: PieceTag, ...facets: Polygon[]) => ({ tag, facets });
-  const polygon = (tag: ColorKey, points: Point[]) => ({ tag, points });
+  const polygon = (tag: ColorName, points: Point[]) => ({ tag, points });
 
   return [
     // stationary
@@ -511,8 +513,14 @@ function rotateAxis1(): Permutation {
   return {};
 }
 
-function permCycle(...items: string[]) {
-  //initi;
+function permCycle(...items: number[]): Permutation {
+  const perm = identityPermutation();
+
+  for (let i = 0; i < items.length - 1; i++) {
+    perm[items[i]] = items[i + 1];
+  }
+  perm[items[items.length - 1]] = items[0];
+  return perm;
 }
 // BLOG: const assertions and DRY unions
 // how to have a typed union based on an array literal:
