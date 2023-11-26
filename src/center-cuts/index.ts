@@ -129,7 +129,6 @@ export function run(gl: WebGLRenderingContext): void {
 
   let activeCameraAxis = vec3.create();
   let cameraRotation = mat4.create();
-  //let activeCameraMotion: CameraMotion | null = null;
   const actionBuffer: Action[] = [];
 
   document.onkeydown = (e) => {
@@ -153,8 +152,6 @@ export function run(gl: WebGLRenderingContext): void {
       if (motion === "c-z") {
         activeCameraAxis[2] = -1;
       }
-
-      console.log("axis", JSON.stringify(activeCameraAxis));
     } else if (isActionKey(e.key)) {
       actionBuffer.push(actions[e.key]);
     }
@@ -191,11 +188,7 @@ export function run(gl: WebGLRenderingContext): void {
     }
     then = ms;
 
-    if (
-      activeCameraAxis[0] !== 0 ||
-      activeCameraAxis[1] !== 0 ||
-      activeCameraAxis[2] !== 0
-    ) {
+    if (activeCameraAxis.some((c) => c !== 0)) {
       mat4.fromRotation(
         __rotate,
         (rotation * delta) / duration,
