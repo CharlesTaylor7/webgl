@@ -40,7 +40,16 @@ type Polygon = {
 
 type Permutation = Record<number, number>;
 
+type PieceTag =
+  // triangle center
+  | `t${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  // square cap
+  | `s${1 | 2 | 3 | 4 | 5 | 6}`
+  // hexagonal cross section
+  | `h${1 | 2}`;
+
 type Piece = {
+  tag: PieceTag;
   facets: Polygon[];
 };
 type Point = vec3;
@@ -379,21 +388,22 @@ function initPieces(): Piece[] {
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
 
-  const piece = (...facets: Polygon[]) => ({ facets });
+  const piece = (tag: PieceTag, ...facets: Polygon[]) => ({ tag, facets });
   const polygon = (tag: ColorKey, points: Point[]) => ({ tag, points });
 
   return [
     // stationary
     // cross section
-    piece(polygon("LIGHT_GREEN", h1)),
+    piece("h1", polygon("LIGHT_GREEN", h1)),
     // triangles
-    piece(polygon("SILVER", t1)),
-    piece(polygon("REDDISH_PINK", t2)),
-    piece(polygon("LIGHT_BLUE", t4)),
-    piece(polygon("BLUE", t5)),
+    piece("t1", polygon("SILVER", t1)),
+    piece("t2", polygon("REDDISH_PINK", t2)),
+    piece("t3", polygon("LIGHT_BLUE", t4)),
+    piece("t4", polygon("BLUE", t5)),
 
     // square capped pieces
     piece(
+      "s1",
       polygon("CYAN", s1),
       polygon("SILVER", tr1),
       polygon("REDDISH_PINK", tr2),
@@ -401,6 +411,7 @@ function initPieces(): Piece[] {
       polygon("LIGHT_BLUE", tr4),
     ),
     piece(
+      "s2",
       polygon("TEAL", s3),
       polygon("BLUE", rotateY(tr1)),
       polygon("SILVER", rotateY(tr2)),
@@ -408,6 +419,7 @@ function initPieces(): Piece[] {
       polygon("ORANGE", rotateY(tr4)),
     ),
     piece(
+      "s3",
       polygon("LIGHT_PURPLE", s4),
       polygon("BLUE", rotateX(tr1, 3)),
       polygon("YELLOW", rotateX(tr2, 3)),
@@ -417,13 +429,14 @@ function initPieces(): Piece[] {
 
     // rotated
     // cross section
-    piece(polygon("LIGHT_GREEN", h1)),
+    piece("h2", polygon("LIGHT_GREEN", h1)),
     // triangles
-    piece(polygon("GREEN", t3)),
-    piece(polygon("YELLOW", t6)),
-    piece(polygon("PINK", t7)),
-    piece(polygon("ORANGE", t8)),
+    piece("t5", polygon("GREEN", t3)),
+    piece("t6", polygon("YELLOW", t6)),
+    piece("t7", polygon("PINK", t7)),
+    piece("t8", polygon("ORANGE", t8)),
     piece(
+      "s4",
       polygon("VIOLET", s2),
       polygon("LIGHT_BLUE", rotateX(tr1)),
       polygon("GREEN", rotateX(tr2)),
@@ -431,6 +444,7 @@ function initPieces(): Piece[] {
       polygon("ORANGE", rotateX(tr4)),
     ),
     piece(
+      "s5",
       polygon("SKY_BLUE", s5),
       polygon("REDDISH_PINK", rotateY(tr1, 3)),
       polygon("YELLOW", rotateY(tr2, 3)),
@@ -438,6 +452,7 @@ function initPieces(): Piece[] {
       polygon("GREEN", rotateY(tr4, 3)),
     ),
     piece(
+      "s6",
       polygon("LIGHT_RED", s6),
       polygon("YELLOW", rotateY(tr1, 2)),
       polygon("BLUE", rotateY(tr2, 2)),
@@ -497,7 +512,7 @@ function rotateAxis1(): Permutation {
 }
 
 function permCycle(...items: string[]) {
-  initi;
+  //initi;
 }
 // BLOG: const assertions and DRY unions
 // how to have a typed union based on an array literal:
