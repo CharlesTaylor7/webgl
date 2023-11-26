@@ -72,19 +72,20 @@ export function resizeToScreen(gl: WebGLRenderingContext) {
   gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-export function getDefaultProjectionMatrix(gl: WebGLRenderingContext): mat4 {
+const t = mat4.create();
+mat4.fromTranslation(t, [0, 0, -6]);
+
+export function getDefaultProjectionMatrix(
+  gl: WebGLRenderingContext,
+  dest: mat4,
+) {
   const canvas = gl.canvas as HTMLCanvasElement;
   const fieldOfView = (45 * Math.PI) / 180;
   const aspect = canvas.clientWidth / canvas.clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
-  const projectionMatrix = mat4.create();
-  mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-  const t = mat4.create();
-  mat4.fromTranslation(t, [0, 0, -6]);
-  mat4.multiply(projectionMatrix, projectionMatrix, t);
-
-  return projectionMatrix;
+  mat4.perspective(dest, fieldOfView, aspect, zNear, zFar);
+  mat4.multiply(dest, dest, t);
 }
 
 export type Color = [number, number, number, number];

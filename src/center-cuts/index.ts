@@ -205,7 +205,8 @@ export function run(gl: WebGLRenderingContext): void {
 
   // state
   let activeCameraAxis = vec3.create();
-  let cameraRotation = mat4.create();
+  const cameraRotation = mat4.create();
+  const puzzleRotation = mat4.create();
   const actionBuffer: Action[] = [];
 
   let permutation: Permutation = identityPermutation();
@@ -213,7 +214,7 @@ export function run(gl: WebGLRenderingContext): void {
   let then = 0;
   let frame = 0;
   let delta = 0;
-  let __rotate = mat4.create();
+  let transform = mat4.create();
 
   document.onkeydown = (e) => {
     if (isCameraKey(e.key)) {
@@ -264,7 +265,9 @@ export function run(gl: WebGLRenderingContext): void {
         actionBuffer.shift();
         frame = 0;
         // TODO: apply rotation now
-        permutation = permCycle(1, 2);
+        permCycle(permutation, 2, 4, 3);
+        permCycle(permutation, 5, 15, 10);
+        permCycle(permutation, 7, 13);
         setVertexColors(gl, p1, colorArray(polygons, permutation));
         action = undefined;
       }
@@ -272,24 +275,28 @@ export function run(gl: WebGLRenderingContext): void {
     then = ms;
 
     if (activeCameraAxis.some((c) => c !== 0)) {
-      mat4.fromRotation(__rotate, delta * cameraSpeed, activeCameraAxis);
-      mat4.multiply(cameraRotation, __rotate, cameraRotation);
+      mat4.fromRotation(transform, delta * cameraSpeed, activeCameraAxis);
+      mat4.multiply(cameraRotation, transform, cameraRotation);
     }
 
     resizeToScreen(gl);
     clearScene(gl);
-    const transform = getDefaultProjectionMatrix(gl);
+    getDefaultProjectionMatrix(gl, transform);
     mat4.multiply(transform, transform, cameraRotation);
     let p4 = setTransformMatrix(gl, p3, transform);
-    drawElements(gl, p4, gl.TRIANGLES, 0, indices.length / 2);
+    drawElements(gl, p4, gl.TRIANGLES, indices.length / 2, indices.length / 2);
 
     if (action) {
-      mat4.fromRotation(__rotate, (rotation * frame) / duration, [1, 1, 1]);
-      mat4.multiply(transform, transform, __rotate);
+      mat4.fromRotation(
+        puzzleRotation,
+        (rotation * frame) / duration,
+        [1, 1, 1],
+      );
+      mat4.multiply(transform, transform, puzzleRotation);
     }
 
     p4 = setTransformMatrix(gl, p3, transform);
-    drawElements(gl, p4, gl.TRIANGLES, indices.length / 2, indices.length / 2);
+    drawElements(gl, p4, gl.TRIANGLES, 0, indices.length / 2);
 
     requestAnimationFrame(render);
   }
@@ -395,7 +402,7 @@ function initPieces(): Piece[] {
   const polygon = (tag: ColorName, points: Point[]) => ({ tag, points });
 
   return [
-    // stationary
+    // moving
     // cross section
     piece("h1", polygon("LIGHT_GREEN", h1)),
     // triangles
@@ -430,7 +437,7 @@ function initPieces(): Piece[] {
       polygon("SILVER", rotateX(tr4, 3)),
     ),
 
-    // rotated
+    // stationary
     // cross section
     piece("h2", polygon("LIGHT_GREEN", h1)),
     // triangles
@@ -516,14 +523,11 @@ function rotateAxis1(): Permutation {
 }
 */
 
-function permCycle(...items: number[]): Permutation {
-  const perm = identityPermutation();
-
+function permCycle(perm: Permutation, ...items: number[]): void {
   for (let i = 0; i < items.length - 1; i++) {
     perm[items[i]] = items[i + 1];
   }
   perm[items[items.length - 1]] = items[0];
-  return perm;
 }
 // BLOG: const assertions and DRY unions
 // how to have a typed union based on an array literal:
