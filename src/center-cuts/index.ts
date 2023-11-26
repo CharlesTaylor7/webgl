@@ -30,8 +30,9 @@ TODO:
   - [x] draw half the puzzle
   - [x] draw arrays in two passes
   - [x] animate
-  - [ ] internal model of puzzle
-  - [ ] permute colors instead of positions
+  - [x] permute colors instead of positions
+  - [ ] rotate camera and puzzle at independent speeds
+  -
 */
 type Polygon = {
   tag: ColorName;
@@ -197,7 +198,9 @@ export function run(gl: WebGLRenderingContext): void {
   const p3 = setVertexColors(gl, p2, colorArray(polygons));
 
   // it takes 1.6 seconds to rotate 120 degrees
-  const duration = 1600;
+  const cameraSpeed = (2 * Math.PI) / (3 * 1600);
+
+  const duration = 400;
   const rotation = (2 * Math.PI) / 3;
 
   // state
@@ -269,11 +272,7 @@ export function run(gl: WebGLRenderingContext): void {
     then = ms;
 
     if (activeCameraAxis.some((c) => c !== 0)) {
-      mat4.fromRotation(
-        __rotate,
-        (rotation * delta) / duration,
-        activeCameraAxis,
-      );
+      mat4.fromRotation(__rotate, delta * cameraSpeed, activeCameraAxis);
       mat4.multiply(cameraRotation, __rotate, cameraRotation);
     }
 
@@ -326,7 +325,9 @@ function colorArray(
 
   for (let i = 0; i < polygons.length; i++) {
     const j = permutation ? permutation[i] ?? i : i;
-    console.log(i, j);
+    if (i !== j) {
+      console.log(i, j);
+    }
     const c = initialFacetColors[j];
     for (let k = 0; k < polygons[i].points.length; k++) {
       data.push(...c);
@@ -509,9 +510,11 @@ function rotateZ(points: Point[], count: number = 1): Point[] {
   });
 }
 
+/*
 function rotateAxis1(): Permutation {
   return {};
 }
+*/
 
 function permCycle(...items: number[]): Permutation {
   const perm = identityPermutation();
