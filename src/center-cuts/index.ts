@@ -10,10 +10,9 @@ import {
 
 import {
   default3DShaderProgram,
-  setProjectionMatrix,
   setVertexPositions,
   setVertexColors,
-  setRotationMatrix,
+  setTransformMatrix,
   drawElements,
   setVertexIndices,
 } from "../typed-builder";
@@ -95,7 +94,7 @@ function isCameraKey(key: string): key is CameraKey {
 
 type Camera = typeof cameraMotions;
 type CameraKey = keyof Camera;
-type CameraMotion = Camera[CameraKey];
+//type CameraMotion = Camera[CameraKey];
 
 // right hand for rotations
 const actions = {
@@ -122,10 +121,9 @@ export function run(gl: WebGLRenderingContext): void {
   const polygons = pieces.flatMap((p) => p.facets);
   const indices = indexPattern(polygons);
   const p0 = default3DShaderProgram(gl);
-  const p1 = setProjectionMatrix(gl, p0, getDefaultProjectionMatrix(gl));
-  const p2 = setVertexPositions(gl, p1, polygonsToPositions(polygons));
-  const p3 = setVertexColors(gl, p2, colorArray(polygons));
-  const p4 = setVertexIndices(gl, p3, indices);
+  const p1 = setVertexPositions(gl, p0, polygonsToPositions(polygons));
+  const p2 = setVertexColors(gl, p1, colorArray(polygons));
+  const p3 = setVertexIndices(gl, p2, indices);
 
   let activeCameraAxis = vec3.create();
   let cameraRotation = mat4.create();
@@ -204,17 +202,19 @@ export function run(gl: WebGLRenderingContext): void {
 
     resizeToScreen(gl);
     clearScene(gl);
-    let p5 = setRotationMatrix(gl, p4, cameraRotation);
-    drawElements(gl, p5, gl.TRIANGLES, 0, indices.length / 2);
+    const transform = getDefaultProjectionMatrix(gl);
+    mat4.multiply(transform, transform, cameraRotation);
+    let p4 = setTransformMatrix(gl, p3, transform);
+    drawElements(gl, p4, gl.TRIANGLES, 0, indices.length / 2);
 
     const rotationMatrix = mat4.create();
     if (action) {
       mat4.fromRotation(rotationMatrix, frame / duration, [1, 1, 1]);
     }
-    mat4.multiply(rotationMatrix, cameraRotation, rotationMatrix);
+    mat4.multiply(transform, transform,rotationMatrix);
 
-    p5 = setRotationMatrix(gl, p4, rotationMatrix);
-    drawElements(gl, p5, gl.TRIANGLES, indices.length / 2, indices.length / 2);
+    p4 = setTransformMatrix(gl, p3, transform);
+    drawElements(gl, p4 , gl.TRIANGLES, indices.length / 2, indices.length / 2);
 
     requestAnimationFrame(render);
   }

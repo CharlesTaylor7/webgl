@@ -10,13 +10,12 @@ const default3DVertexShader = `
   attribute vec4 vertexPosition;
   attribute vec4 vertexColor;
 
-  uniform mat4 rotationMatrix;
-  uniform mat4 projectionMatrix;
+  uniform mat4 transformMatrix;
 
   varying lowp vec4 fragmentColor;
 
   void main(void) {
-    gl_Position = projectionMatrix * rotationMatrix * vertexPosition;
+    gl_Position = transformMatrix * vertexPosition;
     fragmentColor = vertexColor;
   }
 `;
@@ -60,8 +59,7 @@ export function default3DShaderProgram(
   | "vertexPosition"
   | "vertexColor"
   | "vertexIndices"
-  | "rotationMatrix"
-  | "projectionMatrix"
+  | "transformMatrix"
 > {
   const program: WebGLProgram = initShaderProgram(gl, {
     vertex: default3DVertexShader,
@@ -130,27 +128,13 @@ export function setVertexColors<K>(
   return program;
 }
 
-export function setProjectionMatrix<K>(
+export function setTransformMatrix<K>(
   gl: WebGLRenderingContext,
   program: ShaderProgramNeeds<K>,
   matrix: mat4,
-): ShaderProgramNeeds<Exclude<K, "projectionMatrix">> {
+): ShaderProgramNeeds<Exclude<K, "transformMatrix">> {
   gl.uniformMatrix4fv(
-    gl.getUniformLocation(program, "projectionMatrix"),
-    false,
-    matrix,
-  );
-  // @ts-ignore
-  return program;
-}
-
-export function setRotationMatrix<K>(
-  gl: WebGLRenderingContext,
-  program: ShaderProgramNeeds<K>,
-  matrix: mat4,
-): ShaderProgramNeeds<Exclude<K, "rotationMatrix">> {
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(program, "rotationMatrix"),
+    gl.getUniformLocation(program, "transformMatrix"),
     false,
     matrix,
   );
