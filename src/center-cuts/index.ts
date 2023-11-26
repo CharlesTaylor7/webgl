@@ -51,6 +51,7 @@ const Colors = {
   LIGHT_BLUE: rgb(212, 241, 252),
   LIGHT_GREEN: rgb(221, 250, 220),
   REDDISH_PINK: [0.96, 0.31, 0.51, 1] as Color,
+  RED: rgb(173, 25, 2),
   LIGHT_RED: [0.91, 0.68, 0.75, 1] as Color,
   LIGHT_PINK: rgb(252, 222, 255),
   LIGHT_PURPLE: [0.77, 0.68, 0.92, 1] as Color,
@@ -60,9 +61,7 @@ const Colors = {
   YELLOW: [0.7, 0.79, 0.17, 1] as Color,
   BLUE: rgb(18, 54, 184),
   GREEN: rgb(14, 82, 17),
-  RED: rgb(173, 25, 2),
   ORANGE: rgb(235, 135, 21),
-  WHITE: rgb(244, 244, 245),
 } as const;
 Colors satisfies Record<string, Color>;
 
@@ -310,7 +309,7 @@ function initPieces(): Piece[] {
     [{ color: Colors.LIGHT_GREEN, points: crossSection }],
     // triangles
     [{ color: Colors.SILVER, points: t1 }],
-    [{ color: Colors.RED, points: t2 }],
+    [{ color: Colors.REDDISH_PINK, points: t2 }],
     [{ color: Colors.LIGHT_BLUE, points: t4 }],
     [{ color: Colors.BLUE, points: t5 }],
 
@@ -318,7 +317,7 @@ function initPieces(): Piece[] {
     [
       { color: Colors.CYAN, points: s1 },
       { color: Colors.SILVER, points: tr1 },
-      { color: Colors.RED, points: tr2 },
+      { color: Colors.REDDISH_PINK, points: tr2 },
       { color: Colors.GREEN, points: tr3 },
       { color: Colors.LIGHT_BLUE, points: tr4 },
     ],
@@ -333,7 +332,7 @@ function initPieces(): Piece[] {
       { color: Colors.LIGHT_PURPLE, points: s4 },
       { color: Colors.BLUE, points: rotateX(tr1, 3) },
       { color: Colors.YELLOW, points: rotateX(tr2, 3) },
-      { color: Colors.RED, points: rotateX(tr3, 3) },
+      { color: Colors.REDDISH_PINK, points: rotateX(tr3, 3) },
       { color: Colors.SILVER, points: rotateX(tr4, 3) },
     ],
 
@@ -354,7 +353,7 @@ function initPieces(): Piece[] {
     ],
     [
       { color: Colors.SKY_BLUE, points: s5 },
-      { color: Colors.RED, points: rotateY(tr1, 3) },
+      { color: Colors.REDDISH_PINK, points: rotateY(tr1, 3) },
       { color: Colors.YELLOW, points: rotateY(tr2, 3) },
       { color: Colors.PINK, points: rotateY(tr3, 3) },
       { color: Colors.GREEN, points: rotateY(tr4, 3) },
