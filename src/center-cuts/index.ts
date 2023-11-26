@@ -148,9 +148,10 @@ export function run(gl: WebGLRenderingContext): void {
 
   let then = 0;
   let frame = 0;
-  let duration = 400;
-  let rotation = Math.PI / 8;
   let delta = 0;
+  // it takes 1.6 seconds to rotate 120 degrees
+  let duration = 1600;
+  let rotation = (2 * Math.PI) / 3;
 
   function render(ms: number) {
     const action = actionBuffer[0];
