@@ -21,7 +21,7 @@ import {
 TODO:
 - [x] rotate camera with keyboard controls
 - [x] animate camera
-- [ ] hold keys to rotate camera instead of buffered actions
+- [x] hold keys to rotate camera instead of buffered actions
 - [ ] outlines or gaps between pieces
 - [ ] lighting
 - [ ] less harsh background
@@ -96,15 +96,12 @@ type Camera = typeof cameraMotions;
 type CameraKey = keyof Camera;
 //type CameraMotion = Camera[CameraKey];
 
-// right hand for rotations
+// 4 axes of rotation
 const actions = {
-  // ijkluo
-  i: "r-x",
-  j: "r+y",
-  k: "r+x",
-  l: "r-y",
-  u: "r+z",
-  o: "r-z",
+  h: "r1",
+  j: "r2",
+  k: "r3",
+  l: "r4",
 } as const;
 const actionKeys = Object.keys(actions);
 
@@ -114,7 +111,6 @@ function isActionKey(key: string): key is ActionKey {
 type Actions = typeof actions;
 type ActionKey = keyof Actions;
 type Action = Actions[ActionKey];
-"r-x" satisfies Action;
 
 export function run(gl: WebGLRenderingContext): void {
   const pieces = initPieces();
@@ -152,6 +148,7 @@ export function run(gl: WebGLRenderingContext): void {
       }
     } else if (isActionKey(e.key)) {
       actionBuffer.push(actions[e.key]);
+      console.log(actionBuffer);
     }
   };
 
@@ -179,10 +176,16 @@ export function run(gl: WebGLRenderingContext): void {
   let __rotate = mat4.create();
 
   function render(ms: number) {
-    const action = actionBuffer[0];
+    let action: Action | undefined = actionBuffer[0];
     delta = ms - then;
     if (action) {
       frame += delta;
+      if (frame > duration) {
+        actionBuffer.shift();
+        frame = 0;
+        // TODO: apply rotation now
+        action = undefined;
+      }
     }
     then = ms;
 
@@ -195,11 +198,6 @@ export function run(gl: WebGLRenderingContext): void {
       mat4.multiply(cameraRotation, __rotate, cameraRotation);
     }
 
-    if (frame > duration) {
-      actionBuffer.shift();
-      frame = 0;
-    }
-
     resizeToScreen(gl);
     clearScene(gl);
     const transform = getDefaultProjectionMatrix(gl);
@@ -207,14 +205,13 @@ export function run(gl: WebGLRenderingContext): void {
     let p4 = setTransformMatrix(gl, p3, transform);
     drawElements(gl, p4, gl.TRIANGLES, 0, indices.length / 2);
 
-    const rotationMatrix = mat4.create();
     if (action) {
-      mat4.fromRotation(rotationMatrix, frame / duration, [1, 1, 1]);
+      mat4.fromRotation(__rotate, (rotation * frame) / duration, [1, 1, 1]);
+      mat4.multiply(transform, transform, __rotate);
     }
-    mat4.multiply(transform, transform,rotationMatrix);
 
     p4 = setTransformMatrix(gl, p3, transform);
-    drawElements(gl, p4 , gl.TRIANGLES, indices.length / 2, indices.length / 2);
+    drawElements(gl, p4, gl.TRIANGLES, indices.length / 2, indices.length / 2);
 
     requestAnimationFrame(render);
   }
