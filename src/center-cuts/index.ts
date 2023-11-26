@@ -379,71 +379,72 @@ function initPieces(): Piece[] {
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
 
+  const piece = (...facets: Polygon[]) => ({ facets });
   const polygon = (tag: ColorKey, points: Point[]) => ({ tag, points });
 
   return [
     // stationary
     // cross section
-    [polygon("LIGHT_GREEN", h1)],
+    piece(polygon("LIGHT_GREEN", h1)),
     // triangles
-    [polygon("SILVER", t1)],
-    [polygon("REDDISH_PINK", t2)],
-    [polygon("LIGHT_BLUE", t4)],
-    [polygon("BLUE", t5)],
+    piece(polygon("SILVER", t1)),
+    piece(polygon("REDDISH_PINK", t2)),
+    piece(polygon("LIGHT_BLUE", t4)),
+    piece(polygon("BLUE", t5)),
 
     // square capped pieces
-    [
+    piece(
       polygon("CYAN", s1),
       polygon("SILVER", tr1),
       polygon("REDDISH_PINK", tr2),
       polygon("GREEN", tr3),
       polygon("LIGHT_BLUE", tr4),
-    ],
-    [
+    ),
+    piece(
       polygon("TEAL", s3),
       polygon("BLUE", rotateY(tr1)),
       polygon("SILVER", rotateY(tr2)),
       polygon("LIGHT_BLUE", rotateY(tr3)),
       polygon("ORANGE", rotateY(tr4)),
-    ],
-    [
+    ),
+    piece(
       polygon("LIGHT_PURPLE", s4),
       polygon("BLUE", rotateX(tr1, 3)),
       polygon("YELLOW", rotateX(tr2, 3)),
       polygon("REDDISH_PINK", rotateX(tr3, 3)),
       polygon("SILVER", rotateX(tr4, 3)),
-    ],
+    ),
 
     // rotated
     // cross section
-    [polygon("LIGHT_GREEN", h1)],
+    piece(polygon("LIGHT_GREEN", h1)),
     // triangles
-    [polygon("GREEN", t3)],
-    [polygon("YELLOW", t6)],
-    [polygon("PINK", t7)],
-    [polygon("ORANGE", t8)],
-    [
+    piece(polygon("GREEN", t3)),
+    piece(polygon("YELLOW", t6)),
+    piece(polygon("PINK", t7)),
+    piece(polygon("ORANGE", t8)),
+    piece(
       polygon("VIOLET", s2),
       polygon("LIGHT_BLUE", rotateX(tr1)),
       polygon("GREEN", rotateX(tr2)),
       polygon("PINK", rotateX(tr3)),
       polygon("ORANGE", rotateX(tr4)),
-    ],
-    [
+    ),
+    piece(
       polygon("SKY_BLUE", s5),
       polygon("REDDISH_PINK", rotateY(tr1, 3)),
       polygon("YELLOW", rotateY(tr2, 3)),
       polygon("PINK", rotateY(tr3, 3)),
       polygon("GREEN", rotateY(tr4, 3)),
-    ],
-    [
+    ),
+    piece(
       polygon("LIGHT_RED", s6),
       polygon("YELLOW", rotateY(tr1, 2)),
       polygon("BLUE", rotateY(tr2, 2)),
       polygon("ORANGE", rotateY(tr3, 2)),
       polygon("PINK", rotateY(tr4, 2)),
-    ],
-  ].map((facets) => ({ facets: facets }));
+    ),
+  ];
 }
 
 function rotatePointX(p: Point): Point {
@@ -491,6 +492,13 @@ function rotateZ(points: Point[], count: number = 1): Point[] {
   });
 }
 
+function rotateAxis1(): Permutation {
+  return {};
+}
+
+function permCycle(...items: string[]) {
+  initi;
+}
 // BLOG: const assertions and DRY unions
 // how to have a typed union based on an array literal:
 /*
