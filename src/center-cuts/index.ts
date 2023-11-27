@@ -59,30 +59,32 @@ type FacetTag = PieceTag | `tr-${1 | 2 | 3 | 4 | 5 | 6}-${1 | 2 | 3 | 4}`;
 
 type Piece = {
   tag: PieceTag;
+  axis: vec3;
   facets: Polygon[];
 };
 type Point = vec3;
 
 const colors = {
-  PINK: rgb(237, 47, 234),
+  MAGENTA: rgb(210, 75, 208),
   SILVER: rgb(143, 143, 143),
-  BLUE_VIOLET: [0.47, 0.6, 0.99, 1] as Color,
+  BLUE_VIOLET: rgb(119, 153, 252),
   SKY_BLUE: rgb(135, 206, 235),
-  LIGHT_BLUE: rgb(212, 241, 252),
+  WHITE: rgb(212, 241, 252),
   LIGHT_GREEN: rgb(221, 250, 220),
-  REDDISH_PINK: [0.96, 0.31, 0.51, 1] as Color,
+  REDDISH_PINK: rgb(244, 79, 130),
   RED: rgb(173, 25, 2),
-  LIGHT_RED: [0.91, 0.68, 0.75, 1] as Color,
+  LIGHT_RED: rgb(232, 173, 191),
   LIGHT_PINK: rgb(252, 222, 255),
-  LIGHT_PURPLE: [0.77, 0.68, 0.92, 1] as Color,
-  CYAN: [0.05, 0.98, 0.94, 1] as Color,
-  TEAL: [0.13, 0.82, 0.64, 1] as Color,
-  VIOLET: [0.37, 0.31, 0.63, 1] as Color,
-  YELLOW: [0.7, 0.79, 0.17, 1] as Color,
-  BLUE: rgb(18, 54, 184),
-  GREEN: rgb(14, 82, 17),
+  LIGHT_PURPLE: rgb(196, 173, 234),
+  CYAN: rgb(12, 249, 239),
+  TEAL: rgb(33, 209, 163),
+  VIOLET: rgb(94, 79, 160),
+  YELLOW: rgb(178, 201, 43),
+  BLUE: rgb(41, 67, 163),
+  GREEN: rgb(35, 118, 49),
   ORANGE: rgb(235, 135, 21),
 } as const;
+
 colors satisfies Record<string, Color>;
 type ColorName = keyof typeof colors;
 
@@ -142,7 +144,7 @@ function isActionKey(key: string): key is ActionKey {
 }
 type Actions = typeof actions;
 type ActionKey = keyof Actions;
-type Action = Actions[ActionKey];
+type Action = Axis;
 
 export function run(gl: WebGLRenderingContext): void {
   // setup
@@ -351,7 +353,14 @@ function initPieces(): Piece[] {
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
 
-  const piece = (tag: PieceTag, ...facets: Polygon[]) => ({ tag, facets });
+  const piece = (tag: PieceTag, axis: vec3, ...facets: Polygon[]): Piece => {
+    return {
+      tag,
+      axis,
+      facets,
+    };
+  };
+
   const polygon = (
     color: ColorName,
     tag: FacetTag,
@@ -365,33 +374,36 @@ function initPieces(): Piece[] {
   return [
     // moving
     // cross section
-    piece("h1", polygon("LIGHT_GREEN", "h1", h1)),
+    piece("h1", [-1, -1, -1], polygon("LIGHT_GREEN", "h1", h1)),
 
     // triangles
-    piece("t1", polygon("SILVER", "t1", t1)),
-    piece("t2", polygon("REDDISH_PINK", "t2", t2)),
-    piece("t3", polygon("LIGHT_BLUE", "t3", t3)),
-    piece("t4", polygon("BLUE", "t4", t4)),
+    piece("t1", [1, 1, 1], polygon("SILVER", "t1", t1)),
+    piece("t2", [-1, 1, 1], polygon("REDDISH_PINK", "t2", t2)),
+    piece("t3", [-1, -1, 1], polygon("WHITE", "t3", t3)),
+    piece("t4", [1, 1, -1], polygon("BLUE", "t4", t4)),
 
     // square capped pieces
     piece(
       "s1",
+      [0, 0, 1],
       polygon("CYAN", "s1", s1),
       polygon("SILVER", "tr-1-1", tr1),
       polygon("REDDISH_PINK", "tr-1-2", tr2),
       polygon("GREEN", "tr-1-3", tr3),
-      polygon("LIGHT_BLUE", "tr-1-4", tr4),
+      polygon("WHITE", "tr-1-4", tr4),
     ),
     piece(
       "s2",
+      [1, 0, 0],
       polygon("TEAL", "s2", s3),
       polygon("BLUE", "tr-2-1", rotateY(tr1)),
       polygon("SILVER", "tr-2-2", rotateY(tr2)),
-      polygon("LIGHT_BLUE", "tr-2-3", rotateY(tr3)),
+      polygon("WHITE", "tr-2-3", rotateY(tr3)),
       polygon("ORANGE", "tr-2-4", rotateY(tr4)),
     ),
     piece(
       "s3",
+      [0, 1, 0],
       polygon("LIGHT_PURPLE", "s3", s4),
       polygon("BLUE", "tr-3-1", rotateX(tr1, 3)),
       polygon("YELLOW", "tr-3-2", rotateX(tr2, 3)),
@@ -401,35 +413,38 @@ function initPieces(): Piece[] {
 
     // stationary
     // cross section
-    piece("h2", polygon("LIGHT_GREEN", "h2", h1)),
+    piece("h2", [1, 1, 1], polygon("LIGHT_GREEN", "h2", h1)),
     // triangles
-    piece("t5", polygon("GREEN", "t5", t5)),
-    piece("t6", polygon("YELLOW", "t6", t6)),
-    piece("t7", polygon("PINK", "t7", t7)),
-    piece("t8", polygon("ORANGE", "t8", t8)),
+    piece("t5", [-1, -1, 1], polygon("GREEN", "t5", t5)),
+    piece("t6", [-1, 1, -1], polygon("YELLOW", "t6", t6)),
+    piece("t7", [-1, -1, -1], polygon("MAGENTA", "t7", t7)),
+    piece("t8", [1, -1, -1], polygon("ORANGE", "t8", t8)),
     piece(
       "s4",
+      [0, -1, 0],
       polygon("VIOLET", "s4", s2),
-      polygon("LIGHT_BLUE", "tr-4-1", rotateX(tr1)),
+      polygon("WHITE", "tr-4-1", rotateX(tr1)),
       polygon("GREEN", "tr-4-2", rotateX(tr2)),
-      polygon("PINK", "tr-4-3", rotateX(tr3)),
+      polygon("MAGENTA", "tr-4-3", rotateX(tr3)),
       polygon("ORANGE", "tr-4-4", rotateX(tr4)),
     ),
     piece(
       "s5",
+      [-1, 0, 0],
       polygon("SKY_BLUE", "s5", s5),
       polygon("REDDISH_PINK", "tr-5-1", rotateY(tr1, 3)),
       polygon("YELLOW", "tr-5-2", rotateY(tr2, 3)),
-      polygon("PINK", "tr-5-3", rotateY(tr3, 3)),
+      polygon("MAGENTA", "tr-5-3", rotateY(tr3, 3)),
       polygon("GREEN", "tr-5-4", rotateY(tr4, 3)),
     ),
     piece(
       "s6",
+      [0, 0, -1],
       polygon("LIGHT_RED", "s6", s6),
       polygon("YELLOW", "tr-6-1", rotateY(tr1, 2)),
       polygon("BLUE", "tr-6-2", rotateY(tr2, 2)),
       polygon("ORANGE", "tr-6-3", rotateY(tr3, 2)),
-      polygon("PINK", "tr-6-4", rotateY(tr4, 2)),
+      polygon("MAGENTA", "tr-6-4", rotateY(tr4, 2)),
     ),
   ];
 }
