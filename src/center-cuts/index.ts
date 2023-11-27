@@ -27,13 +27,17 @@ TODO:
 - [ ] hot key to reset the camera to default orientation
 - [ ] Organize modules for default export 
 - [ ] rotate slices with keyboard controls 
+- [ ] Tag pieces with their axis of rotation
   - [x] fix colors
   - [x] draw half the puzzle
   - [x] draw arrays in two passes
   - [x] animate
   - [x] rotate camera and puzzle at independent speeds
   - [x] Remove type safe builder pattern
-  - [ ] permute positons instead of colors
+  - [x] permute positons instead of colors
+  - [ ] rotate other octants
+  - [ ] animate rotation of other octants
+  - [ ] refactor
   -
 */
 type Polygon = {
@@ -95,12 +99,12 @@ function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
 // left hand for camera
 const cameraMotions = {
   // wasdqe
-  w: "c-x",
-  a: "c-y",
-  s: "c+x",
-  d: "c+y",
-  q: "c+z",
-  e: "c-z",
+  w: "-x",
+  a: "-y",
+  s: "+x",
+  d: "+y",
+  q: "+z",
+  e: "-z",
 } as const;
 
 const cameraKeys = Object.keys(cameraMotions);
@@ -114,12 +118,24 @@ type CameraKey = keyof Camera;
 
 // 4 axes of rotation
 const actions = {
-  h: "r1",
-  j: "r2",
-  k: "r3",
-  l: "r4",
+  h: "+++",
+  j: "+-+",
+  k: "--+",
+  l: "-++",
 } as const;
+actions satisfies Record<string, Axis>;
 const actionKeys = Object.keys(actions);
+
+type Sign = "+" | "-";
+type Axis = `${Sign}${Sign}${Sign}`;
+type Rotations = Record<Axis, (p: Point) => Point>;
+
+// @ts-ignore
+const rotations: Rotations = {
+  "+++": (p) => [p[2], p[0], p[1]],
+  "+-+": (p) => [p[1], -p[2], p[0]],
+  // "--+": (p) => [p[1], p[0], -p[1]],
+};
 
 function isActionKey(key: string): key is ActionKey {
   return actionKeys.includes(key);
@@ -146,7 +162,7 @@ export function run(gl: WebGLRenderingContext): void {
 
   // state
   let activeCameraAxis = vec3.create();
-  let activeRotationAxis = vec3.create();
+  // let activeRotationAxis = vec3.create();
   const cameraRotation = mat4.create();
   const puzzleRotation = mat4.create();
   const actionBuffer: Action[] = [];
@@ -159,22 +175,22 @@ export function run(gl: WebGLRenderingContext): void {
   document.onkeydown = (e) => {
     if (isCameraKey(e.key)) {
       const motion = cameraMotions[e.key];
-      if (motion === "c+x") {
+      if (motion === "+x") {
         activeCameraAxis[0] = 1;
       }
-      if (motion === "c-x") {
+      if (motion === "-x") {
         activeCameraAxis[0] = -1;
       }
-      if (motion === "c+y") {
+      if (motion === "+y") {
         activeCameraAxis[1] = 1;
       }
-      if (motion === "c-y") {
+      if (motion === "-y") {
         activeCameraAxis[1] = -1;
       }
-      if (motion === "c+z") {
+      if (motion === "+z") {
         activeCameraAxis[2] = 1;
       }
-      if (motion === "c-z") {
+      if (motion === "-z") {
         activeCameraAxis[2] = -1;
       }
     } else if (isActionKey(e.key)) {
@@ -209,7 +225,7 @@ export function run(gl: WebGLRenderingContext): void {
 
         for (let i = 0; i < polygons.length / 2; i++) {
           const p = polygons[i];
-          p.points = p.points.map(rotatePointOctant1);
+          p.points = p.points.map(rotations["+++"]);
         }
         setVertexPositions(gl, program, polygonsToPositions(polygons));
 
@@ -429,11 +445,6 @@ function rotatePointY(p: Point): Point {
 function rotatePointZ(p: Point): Point {
   return [-p[1], p[0], p[2]];
 }
-
-function rotatePointOctant1(p: Point): Point {
-  return [p[2], p[0], p[1]];
-}
-
 function rotateX(points: Point[], count: number = 1): Point[] {
   return points.map((p) => {
     for (let i = 0; i < count; i++) {
