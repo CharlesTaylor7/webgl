@@ -21,24 +21,27 @@ TODO:
 - [x] rotate camera with keyboard controls
 - [x] animate camera
 - [x] hold keys to rotate camera instead of buffered actions
+- [x] Tag pieces with their axis of rotation
+- [x] fix colors
+- [x] draw half the puzzle
+- [x] draw arrays in two passes
+- [x] animate
+- [x] rotate camera and puzzle at independent speeds
+- [x] Remove type safe builder pattern
+- [x] permute positons instead of colors
+- [x] filter pieces based on their type and normal axis
+- [x] rotate any octant
+- [ ] double check normals by deriving piece geometry from normals
+- [ ] Temporiality disable animation
+- [ ] fix rotation animation
+
 - [ ] outlines or gaps between pieces
 - [ ] lighting
 - [ ] less harsh background
 - [ ] hot key to reset the camera to default orientation
 - [ ] Organize modules for default export 
 - [ ] rotate slices with keyboard controls 
-- [ ] Tag pieces with their axis of rotation
-  - [x] fix colors
-  - [x] draw half the puzzle
-  - [x] draw arrays in two passes
-  - [x] animate
-  - [x] rotate camera and puzzle at independent speeds
-  - [x] Remove type safe builder pattern
-  - [x] permute positons instead of colors
-  - [ ] rotate other octants
-  - [ ] animate rotation of other octants
-  - [ ] refactor
-  -
+-
 */
 type Polygon = {
   color: ColorName;
@@ -59,7 +62,7 @@ type FacetTag = PieceTag | `tr-${1 | 2 | 3 | 4 | 5 | 6}-${1 | 2 | 3 | 4}`;
 
 type Piece = {
   tag: PieceTag;
-  axis: vec3;
+  normal: vec3;
   facets: Polygon[];
 };
 type Point = vec3;
@@ -71,7 +74,7 @@ const colors = {
   SKY_BLUE: rgb(135, 206, 235),
   WHITE: rgb(212, 241, 252),
   LIGHT_GREEN: rgb(221, 250, 220),
-  REDDISH_PINK: rgb(244, 79, 130),
+  CORAL: rgb(244, 79, 130),
   RED: rgb(173, 25, 2),
   LIGHT_RED: rgb(232, 173, 191),
   LIGHT_PINK: rgb(252, 222, 255),
@@ -124,6 +127,11 @@ const actions = {
   j: "+-+",
   k: "--+",
   l: "-++",
+
+  y: "++-",
+  u: "+--",
+  i: "---",
+  o: "-+-",
 } as const;
 actions satisfies Record<string, Axis>;
 const actionKeys = Object.keys(actions);
@@ -132,11 +140,20 @@ type Sign = "+" | "-";
 type Axis = `${Sign}${Sign}${Sign}`;
 type Rotations = Record<Axis, (p: Point) => Point>;
 
-// @ts-ignore
+function axisToVec(axis: Axis): vec3 {
+  return axis.split("").map((c) => (c === "+" ? 1 : -1)) as vec3;
+}
+
 const rotations: Rotations = {
   "+++": (p) => [p[2], p[0], p[1]],
-  "+-+": (p) => [p[1], -p[2], p[0]],
-  // "--+": (p) => [p[1], p[0], -p[1]],
+  "+-+": (p) => [-p[1], -p[2], p[0]],
+  "--+": (p) => [-p[2], p[0], -p[1]],
+  "-++": (p) => [-p[2], -p[0], p[1]],
+
+  "---": (p) => [p[2], p[1], p[0]],
+  "-+-": (p) => [-p[1], p[0], -p[2]],
+  "++-": (p) => [-p[2], -p[1], p[0]],
+  "+--": (p) => [-p[2], p[1], -p[0]],
 };
 
 function isActionKey(key: string): key is ActionKey {
@@ -146,57 +163,54 @@ type Actions = typeof actions;
 type ActionKey = keyof Actions;
 type Action = Axis;
 
-export function run(gl: WebGLRenderingContext): void {
-  // setup
-  const pieces = initPieces();
+function resetVertexData(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram,
+  pieces: Array<Piece>,
+): number {
   const polygons = pieces.flatMap((p) => p.facets);
   const indices = indexPattern(polygons);
-  const program = default3DShaderProgram(gl);
   setVertexIndices(gl, indices);
   setVertexColors(gl, program, colorArray(polygons));
   setVertexPositions(gl, program, polygonsToPositions(polygons));
+  return indices.length;
+}
 
-  // it takes 1.6 seconds to rotate 120 degrees
-  const cameraSpeed = (2 * Math.PI) / (3 * 1600);
+// it takes 1.6 seconds to rotate the camera 120 degrees
+const CAMERA_SPEED = (2 * Math.PI) / (3 * 1600);
 
-  const duration = 400;
-  const rotation = (2 * Math.PI) / 3;
+export function run(gl: WebGLRenderingContext): void {
+  // setup
+  const program = default3DShaderProgram(gl);
+  let pieces = initPieces();
+  const vertexElementCount = resetVertexData(gl, program, pieces);
 
   // state
-  let activeCameraAxis = vec3.create();
-  // let activeRotationAxis = vec3.create();
+  const activeCameraAxis = vec3.create();
   const cameraRotation = mat4.create();
-  const puzzleRotation = mat4.create();
-  const actionBuffer: Action[] = [];
+  const transform = mat4.create();
 
+  // times / durations in ms
   let then = 0;
-  let frame = 0;
   let delta = 0;
-  let transform = mat4.create();
-
   document.onkeydown = (e) => {
     if (isCameraKey(e.key)) {
       const motion = cameraMotions[e.key];
       if (motion === "+x") {
         activeCameraAxis[0] = 1;
-      }
-      if (motion === "-x") {
+      } else if (motion === "-x") {
         activeCameraAxis[0] = -1;
-      }
-      if (motion === "+y") {
+      } else if (motion === "+y") {
         activeCameraAxis[1] = 1;
-      }
-      if (motion === "-y") {
+      } else if (motion === "-y") {
         activeCameraAxis[1] = -1;
-      }
-      if (motion === "+z") {
+      } else if (motion === "+z") {
         activeCameraAxis[2] = 1;
-      }
-      if (motion === "-z") {
+      } else if (motion === "-z") {
         activeCameraAxis[2] = -1;
       }
     } else if (isActionKey(e.key)) {
-      actionBuffer.push(actions[e.key]);
+      handleAction(actions[e.key]);
     }
   };
 
@@ -205,39 +219,42 @@ export function run(gl: WebGLRenderingContext): void {
       const motion = cameraMotions[e.key];
       if (motion.endsWith("x")) {
         activeCameraAxis[0] = 0;
-      }
-      if (motion.endsWith("y")) {
+      } else if (motion.endsWith("y")) {
         activeCameraAxis[1] = 0;
-      }
-      if (motion.endsWith("z")) {
+      } else if (motion.endsWith("z")) {
         activeCameraAxis[2] = 0;
       }
     }
   };
-  function render(ms: number) {
-    let action: Action | undefined = actionBuffer[0];
-    delta = ms - then;
-    if (action) {
-      frame += delta;
-      if (frame > duration) {
-        console.log(actionBuffer.shift());
-        frame = 0;
-        // TODO rotate
-        //mat4.fromRotation(puzzleRotation, (2 * Math.PI) / 3, [1, 1, 1]);
-
-        for (let i = 0; i < polygons.length / 2; i++) {
-          const p = polygons[i];
-          p.points = p.points.map(rotations["+++"]);
-        }
-        setVertexPositions(gl, program, polygonsToPositions(polygons));
-
-        action = undefined;
+  function handleAction(action: Action) {
+    console.log("action", action);
+    const sorted = [];
+    let i = 0;
+    let j = pieces.length / 2;
+    for (let piece of pieces) {
+      const dotProduct = vec3.dot(axisToVec(action), piece.normal);
+      if (dotProduct > 0) {
+        sorted[i++] = piece;
+      } else {
+        sorted[j++] = piece;
       }
     }
+    pieces = sorted;
+
+    for (let i = 0; i < pieces.length / 2; i++) {
+      for (let polygon of pieces[i].facets) {
+        polygon.points = polygon.points.map(rotations[action]);
+      }
+    }
+    resetVertexData(gl, program, sorted);
+  }
+
+  function render(ms: number) {
+    delta = ms - then;
     then = ms;
 
     if (activeCameraAxis.some((c) => c !== 0)) {
-      mat4.fromRotation(transform, delta * cameraSpeed, activeCameraAxis);
+      mat4.fromRotation(transform, delta * CAMERA_SPEED, activeCameraAxis);
       mat4.multiply(cameraRotation, transform, cameraRotation);
     }
 
@@ -246,19 +263,7 @@ export function run(gl: WebGLRenderingContext): void {
     getDefaultProjectionMatrix(gl, transform);
     mat4.multiply(transform, transform, cameraRotation);
     setTransformMatrix(gl, program, transform);
-    drawElements(gl, gl.TRIANGLES, indices.length / 2, indices.length / 2);
-
-    if (action) {
-      mat4.fromRotation(
-        puzzleRotation,
-        (rotation * frame) / duration,
-        [1, 1, 1],
-      );
-      mat4.multiply(transform, transform, puzzleRotation);
-    }
-
-    setTransformMatrix(gl, program, transform);
-    drawElements(gl, gl.TRIANGLES, 0, indices.length / 2);
+    drawElements(gl, gl.TRIANGLES, 0, vertexElementCount);
 
     requestAnimationFrame(render);
   }
@@ -280,12 +285,6 @@ function indexPattern(polygons: Polygon[]): Uint16Array {
   return new Uint16Array(indices);
 }
 
-/*
-function tap(x: any): any {
-  console.log(JSON.stringify(x));
-  return x;
-}
-*/
 function colorArray(polygons: Polygon[]): Float32Array {
   const data: number[] = [];
 
@@ -353,10 +352,10 @@ function initPieces(): Piece[] {
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
 
-  const piece = (tag: PieceTag, axis: vec3, ...facets: Polygon[]): Piece => {
+  const piece = (tag: PieceTag, normal: vec3, ...facets: Polygon[]): Piece => {
     return {
       tag,
-      axis,
+      normal,
       facets,
     };
   };
@@ -374,12 +373,12 @@ function initPieces(): Piece[] {
   return [
     // moving
     // cross section
-    piece("h1", [-1, -1, -1], polygon("LIGHT_GREEN", "h1", h1)),
+    //piece("h1", [-1, -1, -1], polygon("LIGHT_GREEN", "h1", h1)),
 
     // triangles
     piece("t1", [1, 1, 1], polygon("SILVER", "t1", t1)),
-    piece("t2", [-1, 1, 1], polygon("REDDISH_PINK", "t2", t2)),
-    piece("t3", [-1, -1, 1], polygon("WHITE", "t3", t3)),
+    piece("t2", [-1, 1, 1], polygon("CORAL", "t2", t2)),
+    piece("t3", [1, -1, 1], polygon("WHITE", "t3", t3)),
     piece("t4", [1, 1, -1], polygon("BLUE", "t4", t4)),
 
     // square capped pieces
@@ -388,7 +387,7 @@ function initPieces(): Piece[] {
       [0, 0, 1],
       polygon("CYAN", "s1", s1),
       polygon("SILVER", "tr-1-1", tr1),
-      polygon("REDDISH_PINK", "tr-1-2", tr2),
+      polygon("CORAL", "tr-1-2", tr2),
       polygon("GREEN", "tr-1-3", tr3),
       polygon("WHITE", "tr-1-4", tr4),
     ),
@@ -407,13 +406,13 @@ function initPieces(): Piece[] {
       polygon("LIGHT_PURPLE", "s3", s4),
       polygon("BLUE", "tr-3-1", rotateX(tr1, 3)),
       polygon("YELLOW", "tr-3-2", rotateX(tr2, 3)),
-      polygon("REDDISH_PINK", "tr-3-3", rotateX(tr3, 3)),
+      polygon("CORAL", "tr-3-3", rotateX(tr3, 3)),
       polygon("SILVER", "tr-3-4", rotateX(tr4, 3)),
     ),
 
     // stationary
     // cross section
-    piece("h2", [1, 1, 1], polygon("LIGHT_GREEN", "h2", h1)),
+    // piece("h2", [1, 1, 1], polygon("LIGHT_GREEN", "h2", h1)),
     // triangles
     piece("t5", [-1, -1, 1], polygon("GREEN", "t5", t5)),
     piece("t6", [-1, 1, -1], polygon("YELLOW", "t6", t6)),
@@ -432,7 +431,7 @@ function initPieces(): Piece[] {
       "s5",
       [-1, 0, 0],
       polygon("SKY_BLUE", "s5", s5),
-      polygon("REDDISH_PINK", "tr-5-1", rotateY(tr1, 3)),
+      polygon("CORAL", "tr-5-1", rotateY(tr1, 3)),
       polygon("YELLOW", "tr-5-2", rotateY(tr2, 3)),
       polygon("MAGENTA", "tr-5-3", rotateY(tr3, 3)),
       polygon("GREEN", "tr-5-4", rotateY(tr4, 3)),
