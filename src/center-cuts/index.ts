@@ -33,7 +33,7 @@ TODO:
 - [x] rotate any octant
 - [ ] double check normals by deriving piece geometry from normals
 - [x] Temporiality disable animation
-- [ ] reimplement rotation animation
+- [x] reimplement rotation animation
 - [ ] reimplement action buffer
 - [ ] implement inverse rotations
 - [ ] Restore hexagonal cross sections for rotations
@@ -46,7 +46,7 @@ TODO:
 - [ ] rotate slices with keyboard controls 
 -
 */
-type Polygon = {
+type Facet = {
   color: ColorName;
   tag: FacetTag;
   points: Point[];
@@ -66,9 +66,21 @@ type FacetTag = PieceTag | `tr-${1 | 2 | 3 | 4 | 5 | 6}-${1 | 2 | 3 | 4}`;
 type Piece = {
   tag: PieceTag;
   normal: vec3;
-  facets: Polygon[];
+  facets: Facet[];
 };
 type Point = vec3;
+
+const piece = (tag: PieceTag, normal: vec3, ...facets: Facet[]): Piece => ({
+  tag,
+  normal,
+  facets,
+});
+
+const facet = (color: ColorName, tag: FacetTag, points: Point[]): Facet => ({
+  color,
+  tag,
+  points,
+});
 
 const colors = {
   MAGENTA: rgb(210, 75, 208),
@@ -94,7 +106,7 @@ const colors = {
 colors satisfies Record<string, Color>;
 type ColorName = keyof typeof colors;
 
-function polygonsToPositions(polygons: Array<Polygon>): Float32Array {
+function polygonsToPositions(polygons: Array<Facet>): Float32Array {
   const positions = [];
   for (let polygon of polygons) {
     for (let point of polygon.points) {
@@ -131,33 +143,81 @@ const actions = {
   k: "--+",
   l: "-++",
 
+  /*
   y: "++-",
   u: "+--",
   i: "---",
   o: "-+-",
+  */
 } as const;
 actions satisfies Record<string, Axis>;
 const actionKeys = Object.keys(actions);
 
 type Sign = "+" | "-";
 type Axis = `${Sign}${Sign}${Sign}`;
-type Rotations = Record<Axis, (p: Point) => Point>;
+type Rotations = Record<Axis, RotationInfo>;
 
 function axisToVec(axis: Axis): vec3 {
   return axis.split("").map((c) => (c === "+" ? 1 : -1)) as vec3;
 }
 
+type RotationInfo = { crossSection: Facet; rotatePoint(p: Point): Point };
 const rotations: Rotations = {
-  "+++": (p) => [p[2], p[0], p[1]],
-  "+-+": (p) => [-p[1], -p[2], p[0]],
-  "--+": (p) => [-p[2], p[0], -p[1]],
-  "-++": (p) => [-p[2], -p[0], p[1]],
-
+  "+++": {
+    rotatePoint: (p: vec3) => [p[2], p[0], p[1]],
+    crossSection: facet("LIGHT_GREEN", "h1", 
+      [
+        [1.1035533905932737,0,-1.1035533905932737],
+        [1.1035533905932737,-1.1035533905932737,0],
+        [0,-1.1035533905932737,1.1035533905932737],
+        [-1.1035533905932737,0,1.1035533905932737],
+        [-1.1035533905932737,1.1035533905932737,0],
+        [0,1.1035533905932737,-1.1035533905932737]
+      ]),
+  },
+  "+-+":  {
+    rotatePoint: (p: vec3) => [-p[1], -p[2], p[0]],
+    crossSection: facet("LIGHT_GREEN", "h1", 
+      [
+        [1.1035533905932737,0,-1.1035533905932737],
+        [1.1035533905932737,-1.1035533905932737,0],
+        [0,-1.1035533905932737,1.1035533905932737],
+        [-1.1035533905932737,0,1.1035533905932737],
+        [-1.1035533905932737,1.1035533905932737,0],
+        [0,1.1035533905932737,-1.1035533905932737]
+      ]),
+  },
+  "--+": {
+    rotatePoint: (p: vec3) => [-p[2], p[0], -p[1]],
+    crossSection: facet("LIGHT_GREEN", "h1", 
+      [
+        [1.1035533905932737,0,-1.1035533905932737],
+        [1.1035533905932737,-1.1035533905932737,0],
+        [0,-1.1035533905932737,1.1035533905932737],
+        [-1.1035533905932737,0,1.1035533905932737],
+        [-1.1035533905932737,1.1035533905932737,0],
+        [0,1.1035533905932737,-1.1035533905932737]
+      ]),
+  },
+  "-++": {
+    rotatePoint: (p: vec3) => [-p[2], -p[0], p[1]],
+    crossSection: facet("LIGHT_GREEN", "h1", 
+      [
+        [1.1035533905932737,0,-1.1035533905932737],
+        [1.1035533905932737,-1.1035533905932737,0],
+        [0,-1.1035533905932737,1.1035533905932737],
+        [-1.1035533905932737,0,1.1035533905932737],
+        [-1.1035533905932737,1.1035533905932737,0],
+        [0,1.1035533905932737,-1.1035533905932737]
+      ]),
+  },
+  /*
   "---": (p) => [p[2], p[1], p[0]],
   "-+-": (p) => [-p[1], p[0], -p[2]],
   "++-": (p) => [-p[2], -p[1], p[0]],
   "+--": (p) => [-p[2], p[1], -p[0]],
-};
+  */
+} as Rotations;
 
 function isActionKey(key: string): key is ActionKey {
   return actionKeys.includes(key);
@@ -166,19 +226,6 @@ type Actions = typeof actions;
 type ActionKey = keyof Actions;
 type Action = Axis;
 
-function resetVertexData(
-  gl: WebGLRenderingContext,
-  program: WebGLProgram,
-  pieces: Array<Piece>,
-): number {
-  const polygons = pieces.flatMap((p) => p.facets);
-  const indices = indexPattern(polygons);
-  setVertexIndices(gl, indices);
-  setVertexColors(gl, program, colorArray(polygons));
-  setVertexPositions(gl, program, polygonsToPositions(polygons));
-  return indices.length;
-}
-
 // it takes 1.6 seconds to rotate the camera 120 degrees
 const CAMERA_SPEED = (2 * Math.PI) / (3 * 1600);
 
@@ -186,7 +233,12 @@ export function run(gl: WebGLRenderingContext): void {
   // setup
   const program = default3DShaderProgram(gl);
   let pieces = initPieces();
-  const indexCount = resetVertexData(gl, program, pieces);
+  const polygons = pieces.flatMap((p) => p.facets);
+  const indices = indexPattern(polygons);
+  const indexCount = indices.length;
+  setVertexIndices(gl, indices);
+  setVertexColors(gl, program, colorArray(polygons));
+  setVertexPositions(gl, program, polygonsToPositions(polygons));
 
   // state
   const activeCameraAxis = vec3.create();
@@ -233,8 +285,8 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
   };
+
   function sortPieces(action: Action) {
-    console.log("action", action);
     const sorted = [];
     let i = 0;
     let j = pieces.length / 2;
@@ -247,18 +299,23 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
     pieces = sorted;
-    resetVertexData(gl, program, pieces);
+    const polygons = pieces.flatMap((p) => p.facets);
+    const indices = indexPattern(polygons);
+    setVertexIndices(gl, indices);
+    setVertexColors(gl, program, colorArray(polygons));
+    setVertexPositions(gl, program, polygonsToPositions(polygons));
   }
 
   function rotatePieces(action: Action) {
+    const rotate = rotations[action].rotatePoint
     for (let i = 0; i < pieces.length / 2; i++) {
       const piece = pieces[i];
-      piece.normal = rotations[action](piece.normal);
+      piece.normal = rotate(piece.normal);
       for (let polygon of piece.facets) {
-        polygon.points = polygon.points.map(rotations[action]);
+        polygon.points = polygon.points.map(rotate);
       }
     }
-    resetVertexData(gl, program, pieces);
+    setVertexPositions(gl, program, polygonsToPositions(polygons));
   }
 
   let frame = 0;
@@ -312,7 +369,7 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
-function indexPattern(polygons: Polygon[]): Uint16Array {
+function indexPattern(polygons: Facet[]): Uint16Array {
   const indices: number[] = [];
   let total = 0;
   for (let p of polygons) {
@@ -326,7 +383,7 @@ function indexPattern(polygons: Polygon[]): Uint16Array {
   return new Uint16Array(indices);
 }
 
-function colorArray(polygons: Polygon[]): Float32Array {
+function colorArray(polygons: Facet[]): Float32Array {
   const data: number[] = [];
 
   for (let i = 0; i < polygons.length; i++) {
@@ -380,6 +437,7 @@ function initPieces(): Piece[] {
       [c, c, 0],
     ] as Point[]
   ).map(rotatePointY);
+  console.log(JSON.stringify( h1));
   // squares
   const s1: Point[] = [
     [b, 0, a],
@@ -393,98 +451,80 @@ function initPieces(): Piece[] {
   const s5 = rotateZ(s4);
   const s6 = rotateX(s2);
 
-  const piece = (tag: PieceTag, normal: vec3, ...facets: Polygon[]): Piece => {
-    return {
-      tag,
-      normal,
-      facets,
-    };
-  };
-
-  const polygon = (
-    color: ColorName,
-    tag: FacetTag,
-    points: Point[],
-  ): Polygon => ({
-    color,
-    tag,
-    points,
-  });
-
   return [
     // moving
     // cross section
     //piece("h1", [-1, -1, -1], polygon("LIGHT_GREEN", "h1", h1)),
 
     // triangles
-    piece("t1", [1, 1, 1], polygon("SILVER", "t1", t1)),
-    piece("t2", [-1, 1, 1], polygon("CORAL", "t2", t2)),
-    piece("t3", [1, -1, 1], polygon("WHITE", "t3", t3)),
-    piece("t4", [1, 1, -1], polygon("BLUE", "t4", t4)),
+    piece("t1", [1, 1, 1], facet("SILVER", "t1", t1)),
+    piece("t2", [-1, 1, 1], facet("CORAL", "t2", t2)),
+    piece("t3", [1, -1, 1], facet("WHITE", "t3", t3)),
+    piece("t4", [1, 1, -1], facet("BLUE", "t4", t4)),
 
     // square capped pieces
     piece(
       "s1",
       [0, 0, 1],
-      polygon("CYAN", "s1", s1),
-      polygon("SILVER", "tr-1-1", tr1),
-      polygon("CORAL", "tr-1-2", tr2),
-      polygon("GREEN", "tr-1-3", tr3),
-      polygon("WHITE", "tr-1-4", tr4),
+      facet("CYAN", "s1", s1),
+      facet("SILVER", "tr-1-1", tr1),
+      facet("CORAL", "tr-1-2", tr2),
+      facet("GREEN", "tr-1-3", tr3),
+      facet("WHITE", "tr-1-4", tr4),
     ),
     piece(
       "s2",
       [1, 0, 0],
-      polygon("TEAL", "s2", s3),
-      polygon("BLUE", "tr-2-1", rotateY(tr1)),
-      polygon("SILVER", "tr-2-2", rotateY(tr2)),
-      polygon("WHITE", "tr-2-3", rotateY(tr3)),
-      polygon("ORANGE", "tr-2-4", rotateY(tr4)),
+      facet("TEAL", "s2", s3),
+      facet("BLUE", "tr-2-1", rotateY(tr1)),
+      facet("SILVER", "tr-2-2", rotateY(tr2)),
+      facet("WHITE", "tr-2-3", rotateY(tr3)),
+      facet("ORANGE", "tr-2-4", rotateY(tr4)),
     ),
     piece(
       "s3",
       [0, 1, 0],
-      polygon("LIGHT_PURPLE", "s3", s4),
-      polygon("BLUE", "tr-3-1", rotateX(tr1, 3)),
-      polygon("YELLOW", "tr-3-2", rotateX(tr2, 3)),
-      polygon("CORAL", "tr-3-3", rotateX(tr3, 3)),
-      polygon("SILVER", "tr-3-4", rotateX(tr4, 3)),
+      facet("LIGHT_PURPLE", "s3", s4),
+      facet("BLUE", "tr-3-1", rotateX(tr1, 3)),
+      facet("YELLOW", "tr-3-2", rotateX(tr2, 3)),
+      facet("CORAL", "tr-3-3", rotateX(tr3, 3)),
+      facet("SILVER", "tr-3-4", rotateX(tr4, 3)),
     ),
 
     // stationary
     // cross section
     // piece("h2", [1, 1, 1], polygon("LIGHT_GREEN", "h2", h1)),
     // triangles
-    piece("t5", [-1, -1, 1], polygon("GREEN", "t5", t5)),
-    piece("t6", [-1, 1, -1], polygon("YELLOW", "t6", t6)),
-    piece("t7", [-1, -1, -1], polygon("MAGENTA", "t7", t7)),
-    piece("t8", [1, -1, -1], polygon("ORANGE", "t8", t8)),
+    piece("t5", [-1, -1, 1], facet("GREEN", "t5", t5)),
+    piece("t6", [-1, 1, -1], facet("YELLOW", "t6", t6)),
+    piece("t7", [-1, -1, -1], facet("MAGENTA", "t7", t7)),
+    piece("t8", [1, -1, -1], facet("ORANGE", "t8", t8)),
     piece(
       "s4",
       [0, -1, 0],
-      polygon("VIOLET", "s4", s2),
-      polygon("WHITE", "tr-4-1", rotateX(tr1)),
-      polygon("GREEN", "tr-4-2", rotateX(tr2)),
-      polygon("MAGENTA", "tr-4-3", rotateX(tr3)),
-      polygon("ORANGE", "tr-4-4", rotateX(tr4)),
+      facet("VIOLET", "s4", s2),
+      facet("WHITE", "tr-4-1", rotateX(tr1)),
+      facet("GREEN", "tr-4-2", rotateX(tr2)),
+      facet("MAGENTA", "tr-4-3", rotateX(tr3)),
+      facet("ORANGE", "tr-4-4", rotateX(tr4)),
     ),
     piece(
       "s5",
       [-1, 0, 0],
-      polygon("SKY_BLUE", "s5", s5),
-      polygon("CORAL", "tr-5-1", rotateY(tr1, 3)),
-      polygon("YELLOW", "tr-5-2", rotateY(tr2, 3)),
-      polygon("MAGENTA", "tr-5-3", rotateY(tr3, 3)),
-      polygon("GREEN", "tr-5-4", rotateY(tr4, 3)),
+      facet("SKY_BLUE", "s5", s5),
+      facet("CORAL", "tr-5-1", rotateY(tr1, 3)),
+      facet("YELLOW", "tr-5-2", rotateY(tr2, 3)),
+      facet("MAGENTA", "tr-5-3", rotateY(tr3, 3)),
+      facet("GREEN", "tr-5-4", rotateY(tr4, 3)),
     ),
     piece(
       "s6",
       [0, 0, -1],
-      polygon("LIGHT_RED", "s6", s6),
-      polygon("YELLOW", "tr-6-1", rotateY(tr1, 2)),
-      polygon("BLUE", "tr-6-2", rotateY(tr2, 2)),
-      polygon("ORANGE", "tr-6-3", rotateY(tr3, 2)),
-      polygon("MAGENTA", "tr-6-4", rotateY(tr4, 2)),
+      facet("LIGHT_RED", "s6", s6),
+      facet("YELLOW", "tr-6-1", rotateY(tr1, 2)),
+      facet("BLUE", "tr-6-2", rotateY(tr2, 2)),
+      facet("ORANGE", "tr-6-3", rotateY(tr3, 2)),
+      facet("MAGENTA", "tr-6-4", rotateY(tr4, 2)),
     ),
   ];
 }
