@@ -32,8 +32,11 @@ TODO:
 - [x] filter pieces based on their type and normal axis
 - [x] rotate any octant
 - [ ] double check normals by deriving piece geometry from normals
-- [ ] Temporiality disable animation
-- [ ] fix rotation animation
+- [x] Temporiality disable animation
+- [ ] reimplement rotation animation
+- [ ] reimplement action buffer
+- [ ] implement inverse rotations
+- [ ] Restore hexagonal cross sections for rotations
 
 - [ ] outlines or gaps between pieces
 - [ ] lighting
@@ -183,7 +186,7 @@ export function run(gl: WebGLRenderingContext): void {
   // setup
   const program = default3DShaderProgram(gl);
   let pieces = initPieces();
-  const vertexElementCount = resetVertexData(gl, program, pieces);
+  const indexCount = resetVertexData(gl, program, pieces);
 
   // state
   const activeCameraAxis = vec3.create();
@@ -193,6 +196,8 @@ export function run(gl: WebGLRenderingContext): void {
   // times / durations in ms
   let then = 0;
   let delta = 0;
+  let animatingAction: Action | undefined;
+
   document.onkeydown = (e) => {
     if (isCameraKey(e.key)) {
       const motion = cameraMotions[e.key];
@@ -209,8 +214,10 @@ export function run(gl: WebGLRenderingContext): void {
       } else if (motion === "-z") {
         activeCameraAxis[2] = -1;
       }
-    } else if (isActionKey(e.key)) {
-      handleAction(actions[e.key]);
+    } else if (animatingAction === undefined && isActionKey(e.key)) {
+      const action = actions[e.key];
+      animatingAction = action;
+      sortPieces(action);
     }
   };
 
@@ -226,7 +233,7 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
   };
-  function handleAction(action: Action) {
+  function sortPieces(action: Action) {
     console.log("action", action);
     const sorted = [];
     let i = 0;
@@ -240,18 +247,32 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
     pieces = sorted;
+  }
 
+  function rotatePieces(action: Action) {
     for (let i = 0; i < pieces.length / 2; i++) {
-      for (let polygon of pieces[i].facets) {
+      const piece = pieces[i];
+      piece.normal = rotations[action](piece.normal);
+      for (let polygon of piece.facets) {
         polygon.points = polygon.points.map(rotations[action]);
       }
     }
-    resetVertexData(gl, program, sorted);
+    resetVertexData(gl, program, pieces);
   }
 
+  let frame = 0;
+  const animationDuration = 400;
   function render(ms: number) {
     delta = ms - then;
     then = ms;
+    if (animatingAction) {
+      frame += delta;
+      if (frame > animationDuration) {
+        rotatePieces(animatingAction);
+        frame = 0;
+        animatingAction = undefined;
+      }
+    }
 
     if (activeCameraAxis.some((c) => c !== 0)) {
       mat4.fromRotation(transform, delta * CAMERA_SPEED, activeCameraAxis);
@@ -260,10 +281,29 @@ export function run(gl: WebGLRenderingContext): void {
 
     resizeToScreen(gl);
     clearScene(gl);
+
     getDefaultProjectionMatrix(gl, transform);
     mat4.multiply(transform, transform, cameraRotation);
     setTransformMatrix(gl, program, transform);
-    drawElements(gl, gl.TRIANGLES, 0, vertexElementCount);
+
+    if (!animatingAction) {
+      // draw in 1 pass
+      drawElements(gl, gl.TRIANGLES, 0, indexCount);
+    } else {
+      // draw stationary
+      drawElements(gl, gl.TRIANGLES, indexCount / 2, indexCount / 2);
+
+      // draw rotating
+      const animationMatrix = mat4.fromRotation(
+        mat4.create(),
+        ((2 * Math.PI) / 3) * (frame / animationDuration),
+        axisToVec(animatingAction),
+      );
+      mat4.multiply(transform, transform, animationMatrix);
+
+      setTransformMatrix(gl, program, transform);
+      drawElements(gl, gl.TRIANGLES, 0, indexCount / 2);
+    }
 
     requestAnimationFrame(render);
   }
