@@ -247,6 +247,7 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
     pieces = sorted;
+    resetVertexData(gl, program, pieces);
   }
 
   function rotatePieces(action: Action) {
