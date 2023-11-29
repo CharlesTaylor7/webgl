@@ -5,16 +5,13 @@ import {
   clearScene,
   getDefaultProjectionMatrix,
   resizeToScreen,
-} from "../utils";
-
-import {
   default3DShaderProgram,
   setVertexPositions,
   setVertexColors,
   setTransformMatrix,
   drawElements,
   setVertexIndices,
-} from "../typed-builder";
+} from "../utils";
 
 /*
 TODO:
@@ -31,19 +28,17 @@ TODO:
 - [x] permute positons instead of colors
 - [x] filter pieces based on their type and normal axis
 - [x] rotate any octant
-- [ ] double check normals by deriving piece geometry from normals
 - [x] Temporiality disable animation
 - [x] reimplement rotation animation
+- [ ] double check normals by deriving piece geometry from normals
 - [ ] reimplement action buffer
 - [ ] implement inverse rotations
 - [ ] Restore hexagonal cross sections for rotations
-
 - [ ] outlines or gaps between pieces
 - [ ] lighting
 - [ ] less harsh background
 - [ ] hot key to reset the camera to default orientation
 - [ ] Organize modules for default export 
-- [ ] rotate slices with keyboard controls 
 -
 */
 type Facet = {
