@@ -1,0 +1,15 @@
+procs:
+  Wasm Pack:
+    shell: wasm-pack build --target web
+
+  Cargo Watch:
+    shell: cargo watch -x build 
+    autostart: false
+
+  Docs:
+    shell: cargo doc --open
+    autostart: false
+
+  Unit Tests:
+    shell: cargo watch -x test
+    autostart: false
