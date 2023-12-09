@@ -35,10 +35,9 @@ TODO:
 - [ ] implement inverse rotations
 - [ ] Restore hexagonal cross sections for rotations
 - [ ] outlines or gaps between pieces
+- [ ] hot key to reset the camera to default orientation
 - [ ] lighting
 - [ ] less harsh background
-- [ ] hot key to reset the camera to default orientation
-- [ ] Organize modules for default export 
 -
 */
 type Facet = {
@@ -160,51 +159,47 @@ type RotationInfo = { crossSection: Facet; rotatePoint(p: Point): Point };
 const rotations: Rotations = {
   "+++": {
     rotatePoint: (p: vec3) => [p[2], p[0], p[1]],
-    crossSection: facet("LIGHT_GREEN", "h1", 
-      [
-        [1.1035533905932737,0,-1.1035533905932737],
-        [1.1035533905932737,-1.1035533905932737,0],
-        [0,-1.1035533905932737,1.1035533905932737],
-        [-1.1035533905932737,0,1.1035533905932737],
-        [-1.1035533905932737,1.1035533905932737,0],
-        [0,1.1035533905932737,-1.1035533905932737]
-      ]),
+    crossSection: facet("LIGHT_GREEN", "h1", [
+      [1.1035533905932737, 0, -1.1035533905932737],
+      [1.1035533905932737, -1.1035533905932737, 0],
+      [0, -1.1035533905932737, 1.1035533905932737],
+      [-1.1035533905932737, 0, 1.1035533905932737],
+      [-1.1035533905932737, 1.1035533905932737, 0],
+      [0, 1.1035533905932737, -1.1035533905932737],
+    ]),
   },
-  "+-+":  {
+  "+-+": {
     rotatePoint: (p: vec3) => [-p[1], -p[2], p[0]],
-    crossSection: facet("LIGHT_GREEN", "h1", 
-      [
-        [1.1035533905932737,0,-1.1035533905932737],
-        [1.1035533905932737,-1.1035533905932737,0],
-        [0,-1.1035533905932737,1.1035533905932737],
-        [-1.1035533905932737,0,1.1035533905932737],
-        [-1.1035533905932737,1.1035533905932737,0],
-        [0,1.1035533905932737,-1.1035533905932737]
-      ]),
+    crossSection: facet("LIGHT_GREEN", "h1", [
+      [1.1035533905932737, 0, -1.1035533905932737],
+      [1.1035533905932737, -1.1035533905932737, 0],
+      [0, -1.1035533905932737, 1.1035533905932737],
+      [-1.1035533905932737, 0, 1.1035533905932737],
+      [-1.1035533905932737, 1.1035533905932737, 0],
+      [0, 1.1035533905932737, -1.1035533905932737],
+    ]),
   },
   "--+": {
     rotatePoint: (p: vec3) => [-p[2], p[0], -p[1]],
-    crossSection: facet("LIGHT_GREEN", "h1", 
-      [
-        [1.1035533905932737,0,-1.1035533905932737],
-        [1.1035533905932737,-1.1035533905932737,0],
-        [0,-1.1035533905932737,1.1035533905932737],
-        [-1.1035533905932737,0,1.1035533905932737],
-        [-1.1035533905932737,1.1035533905932737,0],
-        [0,1.1035533905932737,-1.1035533905932737]
-      ]),
+    crossSection: facet("LIGHT_GREEN", "h1", [
+      [1.1035533905932737, 0, -1.1035533905932737],
+      [1.1035533905932737, -1.1035533905932737, 0],
+      [0, -1.1035533905932737, 1.1035533905932737],
+      [-1.1035533905932737, 0, 1.1035533905932737],
+      [-1.1035533905932737, 1.1035533905932737, 0],
+      [0, 1.1035533905932737, -1.1035533905932737],
+    ]),
   },
   "-++": {
     rotatePoint: (p: vec3) => [-p[2], -p[0], p[1]],
-    crossSection: facet("LIGHT_GREEN", "h1", 
-      [
-        [1.1035533905932737,0,-1.1035533905932737],
-        [1.1035533905932737,-1.1035533905932737,0],
-        [0,-1.1035533905932737,1.1035533905932737],
-        [-1.1035533905932737,0,1.1035533905932737],
-        [-1.1035533905932737,1.1035533905932737,0],
-        [0,1.1035533905932737,-1.1035533905932737]
-      ]),
+    crossSection: facet("LIGHT_GREEN", "h1", [
+      [1.1035533905932737, 0, -1.1035533905932737],
+      [1.1035533905932737, -1.1035533905932737, 0],
+      [0, -1.1035533905932737, 1.1035533905932737],
+      [-1.1035533905932737, 0, 1.1035533905932737],
+      [-1.1035533905932737, 1.1035533905932737, 0],
+      [0, 1.1035533905932737, -1.1035533905932737],
+    ]),
   },
   /*
   "---": (p) => [p[2], p[1], p[0]],
@@ -302,7 +297,7 @@ export function run(gl: WebGLRenderingContext): void {
   }
 
   function rotatePieces(action: Action) {
-    const rotate = rotations[action].rotatePoint
+    const rotate = rotations[action].rotatePoint;
     for (let i = 0; i < pieces.length / 2; i++) {
       const piece = pieces[i];
       piece.normal = rotate(piece.normal);
@@ -432,7 +427,6 @@ function initPieces(): Piece[] {
       [c, c, 0],
     ] as Point[]
   ).map(rotatePointY);
-  console.log(JSON.stringify( h1));
   // squares
   const s1: Point[] = [
     [b, 0, a],
@@ -561,31 +555,3 @@ function rotateZ(points: Point[], count: number = 1): Point[] {
     return p;
   });
 }
-
-/*
-function rotateAxis1(): Permutation {
-  return {};
-}
-*/
-
-/*
-function permCycle(perm: Permutation, ...items: number[]): void {
-  for (let i = 0; i < items.length - 1; i++) {
-    perm[items[i]] = items[i + 1];
-  }
-  perm[items[items.length - 1]] = items[0];
-}
-*/
-// BLOG: const assertions and DRY unions
-// how to have a typed union based on an array literal:
-/*
-
-type ValuesOf<T> = T extends ReadonlyArray<infer E> ? E : never;
-
-const actions = ["j", "k", "h", "l", "u", "i"] as const;
-type Action = ValuesOf<typeof actions>;
-function isAction(key: string): key is Action {
-  return actions.contains(key);
-}
-
-*/
