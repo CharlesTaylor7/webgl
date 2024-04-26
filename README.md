@@ -9,7 +9,13 @@ It is a simpler version of the [Dayan gem IV](https://twistypuzzles.com/cgi-bin/
 # TODO
 
 ## Port to Rust + WASM
--
+- [ ] Static triangle
+- [ ] 3d object like a cube
+- [ ] camera
+- [ ] puzzle actions
+- [ ] puzzle action animation
+- [ ] action buffer
+
 
 ## Old todo list
 - [x] rotate camera with keyboard controls
