@@ -6,13 +6,11 @@ use web_sys::{window, Document, HtmlCanvasElement, WebGlRenderingContext};
 extern {
   #[wasm_bindgen(js_namespace = console)]
   fn log(s: &str);
-}
-/*
-const canvas = document.querySelector("#webgl-root")! as HTMLCanvasElement;
-const gl = canvas.getContext("webgl")!;
 
-r
-*/
+  #[wasm_bindgen(js_namespace = console)]
+  fn error(s: &str);
+}
+
 
 pub fn webgl_context() -> Result<WebGlRenderingContext> {
   window()
@@ -34,4 +32,5 @@ pub fn webgl_context() -> Result<WebGlRenderingContext> {
 #[wasm_bindgen]
 pub fn main() {
   log(&format!("Main"));
+  webgl_context().unwrap();
 }
