@@ -1,14 +1,14 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use wasm_bindgen::prelude::*;
-use web_sys::{window, Document, HtmlCanvasElement, WebGlRenderingContext};
+use web_sys::{window, HtmlCanvasElement, WebGlRenderingContext};
 
 #[wasm_bindgen]
 extern {
-  #[wasm_bindgen(js_namespace = console)]
-  fn log(s: &str);
+  #[wasm_bindgen(js_name = log, js_namespace = console)]
+  fn console_log(s: &str);
 
-  #[wasm_bindgen(js_namespace = console)]
-  fn error(s: &str);
+  #[wasm_bindgen(js_name = error, js_namespace = console)]
+  fn console_error(s: &str);
 }
 
 
@@ -31,6 +31,8 @@ pub fn webgl_context() -> Result<WebGlRenderingContext> {
 
 #[wasm_bindgen]
 pub fn main() {
-  log(&format!("Main"));
-  webgl_context().unwrap();
+  match webgl_context() {
+      Ok(_context) => console_log("ok"),
+      Err(e) => console_error(&format!("{:#?}", e))
+  }
 }
