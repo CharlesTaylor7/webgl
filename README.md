@@ -9,6 +9,8 @@ It is a simpler version of the [Dayan gem IV](https://twistypuzzles.com/cgi-bin/
 # TODO
 
 ## Port to Rust + WASM
+The plan is to keep the webgl api calls in JS, but use rust -> wasm to handle vertex positions.
+
 - [ ] Static triangle
 - [ ] 3d object like a cube
 - [ ] camera

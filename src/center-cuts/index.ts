@@ -12,6 +12,7 @@ import {
   drawElements,
   setVertexIndices,
 } from "../utils";
+import { get_vertex_indices } from '../../wasm/pkg/look_how_they_truncated_my_boy.js'
 
 type Facet = {
   color: ColorName;
@@ -193,6 +194,8 @@ type Action = Axis;
 const CAMERA_SPEED = (2 * Math.PI) / (3 * 1600);
 
 export function run(gl: WebGLRenderingContext): void {
+  console.log(get_vertex_indices());
+
   // setup
   const program = default3DShaderProgram(gl);
   let pieces = initPieces();
@@ -389,7 +392,7 @@ function initPieces(): Piece[] {
   const tr2 = rotateZ(tr1);
   const tr3 = rotateZ(tr2);
   const tr4 = rotateZ(tr3);
-
+  /*
   const h1 = (
     [
       [c, 0, c],
@@ -400,6 +403,7 @@ function initPieces(): Piece[] {
       [c, c, 0],
     ] as Point[]
   ).map(rotatePointY);
+  */
   // squares
   const s1: Point[] = [
     [b, 0, a],

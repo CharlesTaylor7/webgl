@@ -88,14 +88,14 @@ export function getDefaultProjectionMatrix(
   mat4.multiply(dest, dest, t);
 }
 
-export type Color = [number, number, number, number];
+export type Color = [number, number, number, number] & { __brand: 'color'};
 
 export function randomColor(): Color {
-  return [Math.random(), Math.random(), Math.random(), 1];
+  return [Math.random(), Math.random(), Math.random(), 1] as Color;
 }
 
 export function rgb(red: number, green: number, blue: number): Color {
-  return [red / 255, green / 255, blue / 255, 1.0];
+  return [red / 255, green / 255, blue / 255, 1.0] as Color;
 }
 
 const default3DVertexShader = `
