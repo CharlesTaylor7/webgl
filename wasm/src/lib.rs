@@ -27,11 +27,9 @@ pub fn get_vertex_colors() -> Float32Array {
   use web_sys::js_sys::Float32Array;
   // 3 vertices times 4 rgba values
   let array = Float32Array::new_with_length(3 * 4);
-  /*
-  Float32Array::set_index(&array, 0, 0);
-  Float32Array::set_index(&array, 1, 1);
-  Float32Array::set_index(&array, 2, 2);
-  */
+  Color::MAGENTA.write_to(&array, 0);
+  Color::MAGENTA.write_to(&array, 4);
+  Color::MAGENTA.write_to(&array, 8);
   array
 }
 
@@ -56,7 +54,14 @@ impl Matrix {
   }
 }
 
-pub struct Color(pub [f32; 4]);
+pub struct Point([f32; 3]);
+
+pub struct Facet {
+  pub mesh: Float32Array,
+  pub color: Color,
+}
+
+pub struct Color([f32; 4]);
 
 impl Color {
   pub const fn rgb(red: u8, green: u8, blue: u8) -> Self {
@@ -67,6 +72,14 @@ impl Color {
       1.0,
     ])
   }
+
+  pub fn write_to(&self, array: &Float32Array, start: u32) {
+    Float32Array::set_index(array, start, self.0[0]);
+    Float32Array::set_index(array, start + 1, self.0[1]);
+    Float32Array::set_index(array, start + 2, self.0[2]);
+    Float32Array::set_index(array, start + 3, self.0[3]);
+  }
+
   const MAGENTA: Self = Self::rgb(210, 75, 208);
   const SILVER: Self = Self::rgb(143, 143, 143);
   const BLUE_VIOLET: Self = Self::rgb(119, 153, 252);
