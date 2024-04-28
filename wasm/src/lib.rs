@@ -16,7 +16,7 @@ extern {
 
 #[wasm_bindgen]
 pub fn get_vertex_indices() -> Uint16Array {
-  let array = Uint16Array::new_with_length(3);
+  let array = Uint16Array::new_with_length(3 + 20);
   // 3 vertices
   Uint16Array::set_index(&array, 0, 0);
   Uint16Array::set_index(&array, 1, 1);
@@ -38,7 +38,11 @@ pub fn get_vertex_colors() -> Float32Array {
 #[wasm_bindgen]
 pub fn get_vertex_positions() -> Float32Array {
     // 3 vertices with 3 dimensions
-    Float32Array::new_with_length(3 * 3)
+    let array = Float32Array::new_with_length(3 * 3);
+    Point([0.0,0.0,0.0]).write_to(&array, 0);
+    Point([0.0,1.0,0.0]).write_to(&array, 3);
+    Point([1.0,0.0,0.0]).write_to(&array, 6);
+    array
 }
 
 pub struct Matrix {

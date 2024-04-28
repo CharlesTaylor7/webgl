@@ -12,7 +12,7 @@ import {
   drawElements,
   setVertexIndices,
 } from "../utils";
-import { get_vertex_indices } from '../../wasm/pkg/look_how_they_truncated_my_boy.js'
+import { get_vertex_colors, get_vertex_positions, get_vertex_indices } from '../../wasm/pkg/look_how_they_truncated_my_boy.js'
 
 type Facet = {
   color: ColorName;
@@ -202,9 +202,9 @@ export function run(gl: WebGLRenderingContext): void {
   const polygons = pieces.flatMap((p) => p.facets);
   const indices = indexPattern(polygons);
   const indexCount = indices.length;
-  setVertexIndices(gl, indices);
-  setVertexColors(gl, program, colorArray(polygons));
-  setVertexPositions(gl, program, polygonsToPositions(polygons));
+  setVertexIndices(gl, get_vertex_indices());
+  setVertexColors(gl, program, get_vertex_colors());
+  setVertexPositions(gl, program, get_vertex_positions());
 
   // state
   const activeCameraAxis = vec3.create();
@@ -267,9 +267,9 @@ export function run(gl: WebGLRenderingContext): void {
     pieces = sorted;
     const polygons = pieces.flatMap((p) => p.facets);
     const indices = indexPattern(polygons);
-    setVertexIndices(gl, indices);
-    setVertexColors(gl, program, colorArray(polygons));
-    setVertexPositions(gl, program, polygonsToPositions(polygons));
+    setVertexIndices(gl, get_vertex_indices());
+    setVertexColors(gl, program, get_vertex_colors());
+    setVertexPositions(gl, program, get_vertex_positions());
   }
 
   function rotatePieces(action: Action) {
@@ -281,7 +281,7 @@ export function run(gl: WebGLRenderingContext): void {
         polygon.points = polygon.points.map(rotate);
       }
     }
-    setVertexPositions(gl, program, polygonsToPositions(polygons));
+    setVertexPositions(gl, program, get_vertex_positions());
   }
 
   let frame = 0;
@@ -329,7 +329,7 @@ export function run(gl: WebGLRenderingContext): void {
       drawElements(gl, gl.TRIANGLES, 0, indexCount / 2);
     }
 
-    requestAnimationFrame(render);
+    //requestAnimationFrame(render);
   }
 
   requestAnimationFrame(render);
