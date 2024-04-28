@@ -11,11 +11,13 @@ extern {
   #[wasm_bindgen(js_name = error, js_namespace = console)]
   fn console_error(s: &str);
 }
-// draw triangle
+
+// draw a triangle
 
 #[wasm_bindgen]
 pub fn get_vertex_indices() -> Uint16Array {
   let array = Uint16Array::new_with_length(3);
+  // 3 vertices
   Uint16Array::set_index(&array, 0, 0);
   Uint16Array::set_index(&array, 1, 1);
   Uint16Array::set_index(&array, 2, 2);
@@ -35,7 +37,8 @@ pub fn get_vertex_colors() -> Float32Array {
 
 #[wasm_bindgen]
 pub fn get_vertex_positions() -> Float32Array {
-  Float32Array::new_with_length(3)
+    // 3 vertices with 3 dimensions
+    Float32Array::new_with_length(3 * 3)
 }
 
 pub struct Matrix {
@@ -55,6 +58,13 @@ impl Matrix {
 }
 
 pub struct Point([f32; 3]);
+impl Point {
+  pub fn write_to(&self, array: &Float32Array, start: u32) {
+    Float32Array::set_index(array, start, self.0[0]);
+    Float32Array::set_index(array, start + 1, self.0[1]);
+    Float32Array::set_index(array, start + 2, self.0[2]);
+  }
+}
 
 pub struct Facet {
   pub mesh: Float32Array,
