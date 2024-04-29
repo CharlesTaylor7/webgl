@@ -1,6 +1,7 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![allow(dead_code)]
 use wasm_bindgen::prelude::*;
+use web_sys::{window, HtmlCanvasElement, WebGlRenderingContext};
 use web_sys::js_sys::{Float32Array, Uint16Array};
 
 #[wasm_bindgen]
@@ -12,7 +13,24 @@ extern {
   fn console_error(s: &str);
 }
 
-#[wasm_bindgen]
+pub fn webgl_context() -> WebGlRenderingContext {
+  window()
+    .expect("no window")
+    .document()
+    .expect("no document")
+    .query_selector("#webgl-root")
+    .unwrap()
+    .expect("no element with id webgl-root")
+    .dyn_into::<HtmlCanvasElement>()
+    .unwrap()
+    .get_context("webgl")
+    .expect("no web gl context")
+    .unwrap()
+    .dyn_into::<WebGlRenderingContext>()
+    .unwrap()
+}
+
+
 struct Puzzle {
     pub facets: Vec<Facet>,
 }
