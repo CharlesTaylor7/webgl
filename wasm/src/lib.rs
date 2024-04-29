@@ -16,7 +16,7 @@ extern {
 
 #[wasm_bindgen]
 pub fn get_vertex_indices() -> Uint16Array {
-  let array = Uint16Array::new_with_length(3 + 20);
+  let array = Uint16Array::new_with_length(3);
   // 3 vertices
   Uint16Array::set_index(&array, 0, 0);
   Uint16Array::set_index(&array, 1, 1);
