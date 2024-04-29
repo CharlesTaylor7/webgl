@@ -37,10 +37,6 @@ impl Point {
   }
 }
 
-#[wasm_bindgen]
-pub struct Puzzle {
-
-}
 
 #[wasm_bindgen]
 pub fn get_vertex_indices() -> Uint16Array {
@@ -73,7 +69,9 @@ pub fn get_vertex_positions() -> Float32Array {
     array
 }
 
-
+struct Puzzle {
+    pub facets: Vec<Facet>,
+}
 impl Puzzle {
 
 // draw a triangle
