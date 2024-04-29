@@ -12,34 +12,19 @@ extern {
   fn console_error(s: &str);
 }
 
-pub struct Matrix {
-  array: [f32; 16],
-}
-impl Matrix {
-  pub fn perspective(&mut self, fovy: f32, aspect: f32, near: f32, far: f32) {
-    let f = 1.0 / (fovy / 2.0).tan();
-    let nf = 1.0 / (near - far);
-    self.array.fill(0.0);
-    self.array[0] = f / aspect;
-    self.array[5] = f;
-    self.array[10] = (far + near) * nf;
-    self.array[11] = -1.0;
-    self.array[14] = 2.0 * far * near * nf;
-  }
+#[wasm_bindgen]
+struct Puzzle {
+    pub facets: Vec<Facet>,
 }
 
-pub struct Point([f32; 3]);
-impl Point {
-  pub fn write_to(&self, array: &Float32Array, start: u32) {
-    Float32Array::set_index(array, start, self.0[0]);
-    Float32Array::set_index(array, start + 1, self.0[1]);
-    Float32Array::set_index(array, start + 2, self.0[2]);
-  }
+
+pub fn new_puzzle() -> Puzzle {
+    Puzzle { facets: vec![] }
 }
 
 
 #[wasm_bindgen]
-pub fn get_vertex_indices() -> Uint16Array {
+pub fn get_vertex_indices(p: &Puzzle) -> Uint16Array {
   let array = Uint16Array::new_with_length(3);
   // 3 vertices
   Uint16Array::set_index(&array, 0, 0);
@@ -68,15 +53,33 @@ pub fn get_vertex_positions() -> Float32Array {
     Point([1.0,0.0,0.0]).write_to(&array, 6);
     array
 }
-
-struct Puzzle {
-    pub facets: Vec<Facet>,
+pub struct Matrix {
+  array: [f32; 16],
 }
-impl Puzzle {
-
-// draw a triangle
+impl Matrix {
+  pub fn perspective(&mut self, fovy: f32, aspect: f32, near: f32, far: f32) {
+    let f = 1.0 / (fovy / 2.0).tan();
+    let nf = 1.0 / (near - far);
+    self.array.fill(0.0);
+    self.array[0] = f / aspect;
+    self.array[5] = f;
+    self.array[10] = (far + near) * nf;
+    self.array[11] = -1.0;
+    self.array[14] = 2.0 * far * near * nf;
+  }
 }
 
+pub struct Point([f32; 3]);
+impl Point {
+  pub fn write_to(&self, array: &Float32Array, start: u32) {
+    Float32Array::set_index(array, start, self.0[0]);
+    Float32Array::set_index(array, start + 1, self.0[1]);
+    Float32Array::set_index(array, start + 2, self.0[2]);
+  }
+}
+
+
+#[wasm_bindgen]
 pub struct Facet {
   pub mesh: Float32Array,
   pub normal: Vec3,

@@ -1,5 +1,5 @@
 import { run } from "./center-cuts";
-import init from "../wasm/pkg/look_how_they_truncated_my_boy.js";
+import init, { Puzzle } from "../wasm/pkg/look_how_they_truncated_my_boy.js";
 
 
 init().then(() => {
