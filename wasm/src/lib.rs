@@ -113,3 +113,20 @@ impl Color {
   const GREEN: Self = Self::rgb(35, 118, 49);
   const ORANGE: Self = Self::rgb(235, 135, 21);
 }
+
+/*
+function indexPattern(polygons: Facet[]): Uint16Array {
+  const indices: number[] = [];
+  let total = 0;
+  for (let p of polygons) {
+    const vertexCount = p.points.length;
+    for (let i = 0; i < vertexCount - 2; i++) {
+      indices.push(total, total + i + 1, total + i + 2);
+    }
+    total += vertexCount;
+  }
+
+  return new Uint16Array(indices);
+}
+
+*/

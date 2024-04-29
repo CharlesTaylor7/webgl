@@ -74,16 +74,6 @@ const colors = {
 colors satisfies Record<string, Color>;
 type ColorName = keyof typeof colors;
 
-function polygonsToPositions(polygons: Array<Facet>): Float32Array {
-  const positions = [];
-  for (let polygon of polygons) {
-    for (let point of polygon.points) {
-      positions.push(...point);
-    }
-  }
-  return new Float32Array(positions);
-}
-
 // left hand for camera
 const cameraMotions = {
   // wasdqe
@@ -199,10 +189,9 @@ export function run(gl: WebGLRenderingContext): void {
   // setup
   const program = default3DShaderProgram(gl);
   let pieces = initPieces();
-  const polygons = pieces.flatMap((p) => p.facets);
-  const indices = indexPattern(polygons);
+  const indices = get_vertex_indices();
   const indexCount = indices.length;
-  setVertexIndices(gl, get_vertex_indices());
+  setVertexIndices(gl, indices);
   setVertexColors(gl, program, get_vertex_colors());
   setVertexPositions(gl, program, get_vertex_positions());
 
@@ -265,9 +254,8 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
     pieces = sorted;
-    const polygons = pieces.flatMap((p) => p.facets);
-    const indices = indexPattern(polygons);
-    setVertexIndices(gl, get_vertex_indices());
+    const indices = get_vertex_indices();
+    setVertexIndices(gl, indices);
     setVertexColors(gl, program, get_vertex_colors());
     setVertexPositions(gl, program, get_vertex_positions());
   }
@@ -333,33 +321,6 @@ export function run(gl: WebGLRenderingContext): void {
   }
 
   requestAnimationFrame(render);
-}
-
-function indexPattern(polygons: Facet[]): Uint16Array {
-  const indices: number[] = [];
-  let total = 0;
-  for (let p of polygons) {
-    const vertexCount = p.points.length;
-    for (let i = 0; i < vertexCount - 2; i++) {
-      indices.push(total, total + i + 1, total + i + 2);
-    }
-    total += vertexCount;
-  }
-
-  return new Uint16Array(indices);
-}
-
-function colorArray(polygons: Facet[]): Float32Array {
-  const data: number[] = [];
-
-  for (let i = 0; i < polygons.length; i++) {
-    const c = colors[polygons[i].color];
-    for (let k = 0; k < polygons[i].points.length; k++) {
-      data.push(...c);
-    }
-  }
-
-  return new Float32Array(data);
 }
 
 function initPieces(): Piece[] {
