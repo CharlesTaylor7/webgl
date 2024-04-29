@@ -12,7 +12,7 @@ import {
   drawElements,
   setVertexIndices,
 } from "../utils";
-import { get_vertex_colors, get_vertex_positions, get_vertex_indices } from '../../wasm/pkg/look_how_they_truncated_my_boy.js'
+import { get_vertex_colors, get_vertex_positions, get_vertex_indices, Puzzle } from '../../wasm/pkg/look_how_they_truncated_my_boy.js'
 
 type Facet = {
   color: ColorName;
@@ -183,13 +183,14 @@ type Action = Axis;
 // it takes 1.6 seconds to rotate the camera 120 degrees
 const CAMERA_SPEED = (2 * Math.PI) / (3 * 1600);
 
+const puzzle = new Puzzle();
 export function run(gl: WebGLRenderingContext): void {
-  console.log(get_vertex_indices());
+  console.log(get_vertex_indices(puzzle));
 
   // setup
   const program = default3DShaderProgram(gl);
   let pieces = initPieces();
-  const indices = get_vertex_indices();
+  const indices = get_vertex_indices(puzzle);
   const indexCount = indices.length;
   setVertexIndices(gl, indices);
   setVertexColors(gl, program, get_vertex_colors());
@@ -254,7 +255,7 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
     pieces = sorted;
-    const indices = get_vertex_indices();
+    const indices = get_vertex_indices(puzzle);
     setVertexIndices(gl, indices);
     setVertexColors(gl, program, get_vertex_colors());
     setVertexPositions(gl, program, get_vertex_positions());

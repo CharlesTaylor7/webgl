@@ -12,10 +12,38 @@ extern {
   fn console_error(s: &str);
 }
 
-// draw a triangle
+pub struct Matrix {
+  array: [f32; 16],
+}
+impl Matrix {
+  pub fn perspective(&mut self, fovy: f32, aspect: f32, near: f32, far: f32) {
+    let f = 1.0 / (fovy / 2.0).tan();
+    let nf = 1.0 / (near - far);
+    self.array.fill(0.0);
+    self.array[0] = f / aspect;
+    self.array[5] = f;
+    self.array[10] = (far + near) * nf;
+    self.array[11] = -1.0;
+    self.array[14] = 2.0 * far * near * nf;
+  }
+}
+
+pub struct Point([f32; 3]);
+impl Point {
+  pub fn write_to(&self, array: &Float32Array, start: u32) {
+    Float32Array::set_index(array, start, self.0[0]);
+    Float32Array::set_index(array, start + 1, self.0[1]);
+    Float32Array::set_index(array, start + 2, self.0[2]);
+  }
+}
 
 #[wasm_bindgen]
-pub fn get_vertex_indices() -> Uint16Array {
+pub struct Puzzle {
+
+}
+
+#[wasm_bindgen]
+pub fn get_vertex_indices(puzzle: &Puzzle) -> Uint16Array {
   let array = Uint16Array::new_with_length(3);
   // 3 vertices
   Uint16Array::set_index(&array, 0, 0);
@@ -45,36 +73,19 @@ pub fn get_vertex_positions() -> Float32Array {
     array
 }
 
-pub struct Matrix {
-  array: [f32; 16],
-}
-impl Matrix {
-  pub fn perspective(&mut self, fovy: f32, aspect: f32, near: f32, far: f32) {
-    let f = 1.0 / (fovy / 2.0).tan();
-    let nf = 1.0 / (near - far);
-    self.array.fill(0.0);
-    self.array[0] = f / aspect;
-    self.array[5] = f;
-    self.array[10] = (far + near) * nf;
-    self.array[11] = -1.0;
-    self.array[14] = 2.0 * far * near * nf;
-  }
-}
 
-pub struct Point([f32; 3]);
-impl Point {
-  pub fn write_to(&self, array: &Float32Array, start: u32) {
-    Float32Array::set_index(array, start, self.0[0]);
-    Float32Array::set_index(array, start + 1, self.0[1]);
-    Float32Array::set_index(array, start + 2, self.0[2]);
-  }
+impl Puzzle {
+
+// draw a triangle
 }
 
 pub struct Facet {
   pub mesh: Float32Array,
+  pub normal: Vec3,
   pub color: Color,
 }
 
+pub struct Vec3([f32; 3]);
 pub struct Color([f32; 4]);
 
 impl Color {
