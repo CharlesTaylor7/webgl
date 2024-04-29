@@ -43,7 +43,7 @@ pub struct Puzzle {
 }
 
 #[wasm_bindgen]
-pub fn get_vertex_indices(puzzle: &Puzzle) -> Uint16Array {
+pub fn get_vertex_indices() -> Uint16Array {
   let array = Uint16Array::new_with_length(3);
   // 3 vertices
   Uint16Array::set_index(&array, 0, 0);
