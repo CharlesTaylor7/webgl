@@ -358,7 +358,29 @@ fn set_vertex_colors(gl: &WebGlRenderingContext, colors: &Float32Array) {
   gl.enable_vertex_attrib_array(attribute_index);
 }
 
+fn set_vertex_indices(gl: &WebGlRenderingContext, indices: &Uint16Array) {
+  let buffer = gl.create_buffer();
+  gl.bind_buffer(WebGlRenderingContext::ELEMENT_ARRAY_BUFFER, buffer.as_ref());
+  gl.buffer_data_with_opt_array_buffer(
+    WebGlRenderingContext::ELEMENT_ARRAY_BUFFER,
+    Some(&indices.buffer()),
+    WebGlRenderingContext::DYNAMIC_DRAW,
+  );
+}
+
 /*
+export function setTransformMatrix(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram,
+  matrix: mat4,
+) {
+  gl.uniformMatrix4fv(
+    gl.getUniformLocation(program, "transformMatrix"),
+    false,
+    matrix,
+  );
+}
+
 function indexPattern(polygons: Facet[]): Uint16Array {
   const indices: number[] = [];
   let total = 0;
@@ -371,53 +393,5 @@ function indexPattern(polygons: Facet[]): Uint16Array {
   }
 
   return new Uint16Array(indices);
-}
-
-export function setVertexIndices(
-  gl: WebGLRenderingContext,
-  indices: Uint16Array,
-  usage: GLenum = gl.STATIC_DRAW,
-) {
-  const buffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, usage);
-}
-
-export function setVertexColors(
-  gl: WebGLRenderingContext,
-  program: WebGLProgram,
-  colors: Float32Array,
-) {
-  const buffer = gl.createBuffer()!;
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
-
-  const attributeIndex = gl.getAttribLocation(program, "vertexColor");
-  const numComponents = 4;
-  const type = gl.FLOAT;
-  const normalize = false;
-  const stride = 0;
-  const offset = 0;
-  gl.vertexAttribPointer(
-    attributeIndex,
-    numComponents,
-    type,
-    normalize,
-    stride,
-    offset,
-  );
-  gl.enableVertexAttribArray(attributeIndex);
-}
-
-export function setTransformMatrix(
-  gl: WebGLRenderingContext,
-  program: WebGLProgram,
-  matrix: mat4,
-) {
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(program, "transformMatrix"),
-    false,
-    matrix,
-  );
 }
 */
