@@ -74,21 +74,19 @@ pub fn render(ms: f32) -> Result<()> {
     let delta = ms - p.then;
     p.then = ms;
 
-    /*
-    getDefaultProjectionMatrix(gl, transform);
-    mat4.multiply(transform, transform, cameraRotation);
-    setTransformMatrix(gl, program, transform);
-    */
-
+    let mut transform = mat4::create();
     if p.camera_axis.iter().any(|c| *c != 0.0) {
-      let mut transform = mat4::create();
       mat4::from_rotation(&mut transform, delta * CAMERA_SPEED, &p.camera_axis);
       let mut camera = mat4::create();
       mat4::multiply(&mut camera, &transform, &p.camera_transform);
       p.camera_transform = camera;
+
+      PROJECTION.with(|projection| {
+        mat4::multiply(&mut transform, projection, &p.camera_transform);
+        set_transform_matrix(&gl, &transform);
+      });
     }
 
-    //set_transform_matrix(&gl, &m);
     set_vertex_colors(&gl, &p.get_vertex_colors());
     set_vertex_indices(&gl, &p.get_vertex_indices());
     set_vertex_positions(&gl, &p.get_vertex_positions());
@@ -238,6 +236,10 @@ fn start() -> Result<()> {
     compile_shader(&gl, WebGlRenderingContext::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
   let program = link_program(&gl, &vertex_shader, &fragment_shader)?;
   gl.use_program(Some(&program));
+
+  PROJECTION.with(|projection| {
+    set_transform_matrix(&gl, &projection);
+  });
   Ok(())
 }
 
