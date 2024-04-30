@@ -1,6 +1,6 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![allow(dead_code)]
-use gl_matrix::common::Mat4;
+use gl_matrix::common::{Mat4, PI};
 use gl_matrix::mat4;
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
@@ -10,7 +10,7 @@ use web_sys::{
 };
 
 thread_local! {
-    pub static PUZZLE: RefCell<Puzzle> = RefCell::new(Puzzle::new());
+    pub static PUZZLE: RefCell<Puzzle> = RefCell::new(Puzzle::new(6));
 }
 
 #[wasm_bindgen]
@@ -26,17 +26,20 @@ pub fn render(ms: f64) {
     set_vertex_positions(&gl, &p.get_vertex_positions());
     clear_scene(&gl);
     resize_to_screen(&gl);
-    //gl.draw_arrays(WebGlRenderingContext::LINE_LOOP, 0, 4);
+    /*
+    gl.draw_arrays(
+      WebGlRenderingContext::LINE_LOOP,
+      0,
+      p.get_vertex_count().into(),
+    );
+    */
     gl.draw_elements_with_i32(
       WebGlRenderingContext::TRIANGLES,
-      6,
+      p.get_index_count().into(),
       WebGlRenderingContext::UNSIGNED_SHORT,
       0,
     );
   });
-  //set_vertex_colors(&gl, puzzle.)
-
-  //console::log_2(&JsValue::from("Hello"), &JsValue::from(ms));
 }
 
 const VERTEX_SHADER: &str = r##"
@@ -81,8 +84,6 @@ fn get_program(context: &WebGlRenderingContext) -> WebGlProgram {
     .dyn_into()
     .unwrap()
 }
-
-fn draw(context: &WebGlRenderingContext, vert_count: i32) {}
 
 pub fn compile_shader(
   context: &WebGlRenderingContext,
@@ -156,45 +157,59 @@ pub fn webgl_context() -> WebGlRenderingContext {
 }
 
 struct Puzzle {
-  pub facets: Vec<Facet>,
+  //pub facets: Vec<Facet>,
+  // single polygon
+  vertices: u16,
 }
 
 impl Puzzle {
-  pub fn new() -> Self {
-    Self { facets: vec![] }
+  pub fn new(count: u16) -> Self {
+    Self { vertices: count }
+  }
+
+  pub fn get_vertex_count(&self) -> u16 {
+    self.vertices
+  }
+
+  pub fn get_index_count(&self) -> u16 {
+    3 * (self.vertices - 2)
   }
 
   pub fn get_vertex_indices(&self) -> Uint16Array {
-    let array = Uint16Array::new_with_length(6);
-    // 4 vertices
-    // 6 indices for 2 triangles
-    Uint16Array::set_index(&array, 0, 0);
-    Uint16Array::set_index(&array, 1, 1);
-    Uint16Array::set_index(&array, 2, 2);
-    Uint16Array::set_index(&array, 3, 1);
-    Uint16Array::set_index(&array, 4, 2);
-    Uint16Array::set_index(&array, 5, 3);
-    console::log_1(&JsValue::from(array.clone()));
+    let array = Uint16Array::new_with_length((self.get_index_count()).into());
+    let mut n: u32 = 0;
+    let mut i: u16 = 0;
+    while i < self.vertices - 2 {
+      Uint16Array::set_index(&array, n, 0);
+      n += 1;
+      Uint16Array::set_index(&array, n, i + 1);
+      n += 1;
+      Uint16Array::set_index(&array, n, i + 2);
+      n += 1;
+      i += 1;
+    }
+    //console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
     array
   }
 
   pub fn get_vertex_colors(&self) -> Float32Array {
-    // 4 vertices times 4 rgba values
-    let array = Float32Array::new_with_length(4 * 4);
-    Color::MAGENTA.write_to(&array, 0);
-    Color::MAGENTA.write_to(&array, 4);
-    Color::MAGENTA.write_to(&array, 8);
-    Color::MAGENTA.write_to(&array, 12);
+    // n vertices times 4 rgba values
+    let array = Float32Array::new_with_length(((self.vertices) * 4).into());
+    for i in 0..self.vertices {
+      Color::MAGENTA.write_to(&array, (4 * i).into());
+    }
+
+    // console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
     array
   }
 
   pub fn get_vertex_positions(&self) -> Float32Array {
-    // 4 vertices with 3 dimensions
-    let array = Float32Array::new_with_length(4 * 3);
-    Point([0.0, 0.0, 0.0]).write_to(&array, 0);
-    Point([0.0, 1.0, 0.0]).write_to(&array, 3);
-    Point([1.0, 0.0, 0.0]).write_to(&array, 6);
-    Point([1.0, 1.0, 0.0]).write_to(&array, 9);
+    let array = Float32Array::new_with_length((self.vertices * 3).into());
+    for i in 0..self.vertices {
+      let rads: f32 = 2.0 * PI * f32::from(i) / f32::from(self.vertices);
+      Point([rads.cos(), rads.sin(), 0.0]).write_to(&array, (i * 3).into())
+    }
+    // console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
     array
   }
 }
