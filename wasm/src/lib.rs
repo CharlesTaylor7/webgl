@@ -304,7 +304,7 @@ impl Color {
   const ORANGE: Self = Self::rgb(235, 135, 21);
 }
 
-fn set_vertex_positions(gl: &WebGlRenderingContext, positions: Float32Array) {
+fn set_vertex_positions(gl: &WebGlRenderingContext, positions: &Float32Array) {
   let program = get_program(gl);
   let buffer = gl.create_buffer();
   gl.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, buffer.as_ref());
@@ -316,6 +316,33 @@ fn set_vertex_positions(gl: &WebGlRenderingContext, positions: Float32Array) {
 
   let attribute_index = gl.get_attrib_location(&program, "vertexPosition") as u32;
   let num_components = 3;
+  let array_type = WebGlRenderingContext::FLOAT;
+  let normalize = false;
+  let stride = 0;
+  let offset = 0;
+  gl.vertex_attrib_pointer_with_i32(
+    attribute_index,
+    num_components,
+    array_type,
+    normalize,
+    stride,
+    offset,
+  );
+  gl.enable_vertex_attrib_array(attribute_index);
+}
+
+fn set_vertex_colors(gl: &WebGlRenderingContext, colors: &Float32Array) {
+  let program = get_program(gl);
+  let buffer = gl.create_buffer();
+  gl.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, buffer.as_ref());
+  gl.buffer_data_with_opt_array_buffer(
+    WebGlRenderingContext::ARRAY_BUFFER,
+    Some(&colors.buffer()),
+    WebGlRenderingContext::DYNAMIC_DRAW,
+  );
+
+  let attribute_index = gl.get_attrib_location(&program, "vertexColor") as u32;
+  let num_components = 4;
   let array_type = WebGlRenderingContext::FLOAT;
   let normalize = false;
   let stride = 0;
@@ -346,8 +373,6 @@ function indexPattern(polygons: Facet[]): Uint16Array {
   return new Uint16Array(indices);
 }
 
-*/
-/*
 export function setVertexIndices(
   gl: WebGLRenderingContext,
   indices: Uint16Array,
