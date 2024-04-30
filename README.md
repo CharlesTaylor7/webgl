@@ -12,6 +12,7 @@ It is a simpler version of the [Dayan gem IV](https://twistypuzzles.com/cgi-bin/
 The plan is to keep the webgl api calls in JS, but use rust -> wasm to handle vertex positions.
 The goal is to generate correct piece geometries.
 Optimizing render latency will be followup work.
+We're gonna port everything to wasm. Passing datastructures between js and wasm, is confusing to setup and is pure overhead.
 
 - [x] Static triangle
 - [ ] 3d object like a cube
@@ -45,5 +46,5 @@ Optimizing render latency will be followup work.
 - [ ] hot key to reset the camera to default orientation
 - [ ] lighting
 - [ ] less harsh background
--
+- [ ] Upgrade to Webgl2: https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
 
