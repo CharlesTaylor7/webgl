@@ -6,7 +6,8 @@ use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys::{Float32Array, Uint16Array};
 use web_sys::{
-  console, window, HtmlCanvasElement, HtmlElement, WebGlProgram, WebGlRenderingContext, WebGlShader,
+  console, window, HtmlCanvasElement, HtmlElement, KeyboardEvent, WebGlProgram,
+  WebGlRenderingContext, WebGlShader,
 };
 
 thread_local! {
@@ -26,13 +27,6 @@ pub fn render(ms: f64) {
     set_vertex_positions(&gl, &p.get_vertex_positions());
     clear_scene(&gl);
     resize_to_screen(&gl);
-    /*
-    gl.draw_arrays(
-      WebGlRenderingContext::LINE_LOOP,
-      0,
-      p.get_vertex_count().into(),
-    );
-    */
     gl.draw_elements_with_i32(
       WebGlRenderingContext::TRIANGLES,
       p.get_index_count().into(),
@@ -41,6 +35,54 @@ pub fn render(ms: f64) {
     );
   });
 }
+
+#[wasm_bindgen]
+pub fn on_key_down(event: KeyboardEvent) {
+  console::log_2(&JsValue::from("keydown"), &JsValue::from(event));
+}
+
+#[wasm_bindgen]
+pub fn on_key_up(event: KeyboardEvent) {
+  console::log_2(&JsValue::from("keyup"), &JsValue::from(event));
+}
+
+/*
+  document.onkeydown = (e) => {
+    if (isCameraKey(e.key)) {
+      const motion = cameraMotions[e.key];
+      if (motion === "+x") {
+        activeCameraAxis[0] = 1;
+      } else if (motion === "-x") {
+        activeCameraAxis[0] = -1;
+      } else if (motion === "+y") {
+        activeCameraAxis[1] = 1;
+      } else if (motion === "-y") {
+        activeCameraAxis[1] = -1;
+      } else if (motion === "+z") {
+        activeCameraAxis[2] = 1;
+      } else if (motion === "-z") {
+        activeCameraAxis[2] = -1;
+      }
+    } else if (animatingAction === undefined && isActionKey(e.key)) {
+      const action = actions[e.key];
+      animatingAction = action;
+      sortPieces(action);
+    }
+  };
+
+  document.onkeyup = (e) => {
+    if (isCameraKey(e.key)) {
+      const motion = cameraMotions[e.key];
+      if (motion.endsWith("x")) {
+        activeCameraAxis[0] = 0;
+      } else if (motion.endsWith("y")) {
+        activeCameraAxis[1] = 0;
+      } else if (motion.endsWith("z")) {
+        activeCameraAxis[2] = 0;
+      }
+    }
+  };
+*/
 
 const VERTEX_SHADER: &str = r##"
   attribute vec4 vertexPosition;
