@@ -1,10 +1,12 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![allow(dead_code)]
+use gl_matrix::common::Mat4;
+use gl_matrix::mat4;
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys::{Float32Array, Uint16Array};
 use web_sys::{
-  console, window, HtmlCanvasElement, WebGlProgram, WebGlRenderingContext, WebGlShader,
+  console, window, HtmlCanvasElement, HtmlElement, WebGlProgram, WebGlRenderingContext, WebGlShader,
 };
 
 /* TODO
@@ -19,7 +21,16 @@ thread_local! {
 
 #[wasm_bindgen]
 pub fn render(ms: f64) {
-  console::log_2(&JsValue::from("Hello"), &JsValue::from(ms));
+  let gl = webgl_context();
+  PUZZLE.with_borrow(|p: &Puzzle| {
+    set_vertex_colors(&gl, &p.get_vertex_colors());
+    set_vertex_indices(&gl, &p.get_vertex_indices());
+    set_vertex_positions(&gl, &p.get_vertex_positions());
+    draw(&gl, 3);
+  });
+  //set_vertex_colors(&gl, puzzle.)
+
+  //console::log_2(&JsValue::from("Hello"), &JsValue::from(ms));
 }
 
 const VERTEX_SHADER: &str = r##"
@@ -46,24 +57,17 @@ const FRAGMENT_SHADER: &str = r##"
 
 #[wasm_bindgen(start)]
 fn start() -> Result<(), JsValue> {
-  let context = webgl_context();
-  console::log_1(&context);
+  let gl = webgl_context();
+  console::log_1(&gl);
 
-  let vert_shader = compile_shader(
-    &context,
-    WebGlRenderingContext::VERTEX_SHADER,
-    VERTEX_SHADER,
-  )?;
+  let vert_shader = compile_shader(&gl, WebGlRenderingContext::VERTEX_SHADER, VERTEX_SHADER)?;
 
-  let frag_shader = compile_shader(
-    &context,
-    WebGlRenderingContext::FRAGMENT_SHADER,
-    FRAGMENT_SHADER,
-  )?;
-  let program = link_program(&context, &vert_shader, &frag_shader)?;
-  context.use_program(Some(&program));
+  let frag_shader = compile_shader(&gl, WebGlRenderingContext::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
+  let program = link_program(&gl, &vert_shader, &frag_shader)?;
+  gl.use_program(Some(&program));
   Ok(())
   /*
+
 
       let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
 
@@ -233,21 +237,6 @@ impl Puzzle {
     array
   }
 }
-pub struct Matrix {
-  array: [f32; 16],
-}
-impl Matrix {
-  pub fn perspective(&mut self, fovy: f32, aspect: f32, near: f32, far: f32) {
-    let f = 1.0 / (fovy / 2.0).tan();
-    let nf = 1.0 / (near - far);
-    self.array.fill(0.0);
-    self.array[0] = f / aspect;
-    self.array[5] = f;
-    self.array[10] = (far + near) * nf;
-    self.array[11] = -1.0;
-    self.array[14] = 2.0 * far * near * nf;
-  }
-}
 
 pub struct Point([f32; 3]);
 impl Point {
@@ -264,7 +253,7 @@ pub struct Facet {
   pub color: Color,
 }
 
-pub struct Vec3([f32; 3]);
+pub struct Vec3(pub [f32; 3]);
 pub struct Color([f32; 4]);
 
 impl Color {
@@ -368,19 +357,33 @@ fn set_vertex_indices(gl: &WebGlRenderingContext, indices: &Uint16Array) {
   );
 }
 
-/*
-export function setTransformMatrix(
-  gl: WebGLRenderingContext,
-  program: WebGLProgram,
-  matrix: mat4,
-) {
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(program, "transformMatrix"),
+/* This is used for the camera
+ * (maybe also for pieces rotation? )
+ * */
+fn set_transform_matrix(gl: &WebGlRenderingContext, matrix: &Mat4) {
+  let program = get_program(gl);
+  gl.uniform_matrix4fv_with_f32_array(
+    gl.get_uniform_location(&program, "transformMatrix")
+      .as_ref(),
     false,
     matrix,
-  );
+  )
 }
 
+fn get_projection_matrix(gl: &WebGlRenderingContext, dest: &mut Mat4) {
+  let canvas: HtmlElement = gl.canvas().unwrap().dyn_into::<HtmlElement>().unwrap();
+  let fov = (45.0 * std::f64::consts::PI as f32) / 180.0;
+  let aspect = canvas.client_width() as f32 / canvas.client_height() as f32;
+  let near = 0.1;
+  let far = 100.0;
+  let mut p = mat4::create();
+  mat4::perspective(&mut p, fov, aspect, near, Some(far));
+  let mut t = mat4::create();
+  mat4::from_translation(&mut t, &[0.0, 0.0, -6.0]);
+  mat4::multiply(dest, &p, &t);
+}
+
+/*
 function indexPattern(polygons: Facet[]): Uint16Array {
   const indices: number[] = [];
   let total = 0;
