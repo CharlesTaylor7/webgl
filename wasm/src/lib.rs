@@ -22,7 +22,11 @@ thread_local! {
 #[wasm_bindgen]
 pub fn render(ms: f64) {
   let gl = webgl_context();
+
+  let mut m = mat4::create();
+  get_projection_matrix(&gl, &mut m);
   PUZZLE.with_borrow(|p: &Puzzle| {
+    set_transform_matrix(&gl, &m);
     set_vertex_colors(&gl, &p.get_vertex_colors());
     set_vertex_indices(&gl, &p.get_vertex_indices());
     set_vertex_positions(&gl, &p.get_vertex_positions());
