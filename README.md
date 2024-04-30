@@ -14,7 +14,7 @@ The goal is to generate correct piece geometries.
 Optimizing render latency will be followup work.
 We're gonna port everything to wasm. Passing datastructures between js and wasm, is confusing to setup and is pure overhead.
 
-- [x] Static triangle
+- [ ] Static triangle
 - [ ] 3d object like a cube
 - [ ] camera
 - [ ] puzzle actions

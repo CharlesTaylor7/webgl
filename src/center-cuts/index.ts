@@ -12,7 +12,6 @@ import {
   drawElements,
   setVertexIndices,
 } from "../utils";
-import { get_vertex_colors, get_vertex_positions, get_vertex_indices} from '../../wasm/pkg/look_how_they_truncated_my_boy.js'
 
 type Facet = {
   color: ColorName;
@@ -242,37 +241,6 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
   };
-
-  function sortPieces(action: Action) {
-    const sorted = [];
-    let i = 0;
-    let j = pieces.length / 2;
-    for (let piece of pieces) {
-      const dotProduct = vec3.dot(axisToVec(action), piece.normal);
-      if (dotProduct > 0) {
-        sorted[i++] = piece;
-      } else {
-        sorted[j++] = piece;
-      }
-    }
-    pieces = sorted;
-    const indices = get_vertex_indices(puzzle);
-    setVertexIndices(gl, indices);
-    setVertexColors(gl, program, get_vertex_colors());
-    setVertexPositions(gl, program, get_vertex_positions());
-  }
-
-  function rotatePieces(action: Action) {
-    const rotate = rotations[action].rotatePoint;
-    for (let i = 0; i < pieces.length / 2; i++) {
-      const piece = pieces[i];
-      piece.normal = rotate(piece.normal);
-      for (let polygon of piece.facets) {
-        polygon.points = polygon.points.map(rotate);
-      }
-    }
-    setVertexPositions(gl, program, get_vertex_positions());
-  }
 
   let frame = 0;
   const animationDuration = 400;
