@@ -1,7 +1,7 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![allow(dead_code)]
-use gl_matrix::common::{Mat4, PI};
-use gl_matrix::mat4;
+use gl_matrix::common::{Mat4, Vec3, PI};
+use gl_matrix::{mat4, vec3};
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys::{Float32Array, Uint16Array};
@@ -10,13 +10,15 @@ use web_sys::{
   WebGlRenderingContext, WebGlShader,
 };
 
+type Result<T, E = JsValue> = std::result::Result<T, E>;
+
 thread_local! {
     pub static PUZZLE: RefCell<Puzzle> = RefCell::new(Puzzle::new(6));
 }
 
 #[wasm_bindgen]
-pub fn render(ms: f64) {
-  let gl = webgl_context();
+pub fn render(ms: f64) -> Result<()> {
+  let gl = webgl_context()?;
 
   let mut m = mat4::create();
   get_projection_matrix(&gl, &mut m);
@@ -34,6 +36,7 @@ pub fn render(ms: f64) {
       0,
     );
   });
+  Ok(())
 }
 
 #[wasm_bindgen]
@@ -107,14 +110,12 @@ const FRAGMENT_SHADER: &str = r##"
 "##;
 
 #[wasm_bindgen(start)]
-fn start() -> Result<(), JsValue> {
-  let gl = webgl_context();
-  //console::log_1(&gl);
-
-  let vert_shader = compile_shader(&gl, WebGlRenderingContext::VERTEX_SHADER, VERTEX_SHADER)?;
-
-  let frag_shader = compile_shader(&gl, WebGlRenderingContext::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
-  let program = link_program(&gl, &vert_shader, &frag_shader)?;
+fn start() -> Result<()> {
+  let gl = webgl_context()?;
+  let vertex_shader = compile_shader(&gl, WebGlRenderingContext::VERTEX_SHADER, VERTEX_SHADER)?;
+  let fragment_shader =
+    compile_shader(&gl, WebGlRenderingContext::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
+  let program = link_program(&gl, &vertex_shader, &fragment_shader)?;
   gl.use_program(Some(&program));
   Ok(())
 }
@@ -181,32 +182,37 @@ pub fn link_program(
   }
 }
 
-pub fn webgl_context() -> WebGlRenderingContext {
-  window()
-    .expect("no window")
+pub fn webgl_context() -> Result<WebGlRenderingContext> {
+  let gl = window()
+    .ok_or("no window")?
     .document()
-    .expect("no document")
-    .query_selector("#webgl-root")
-    .unwrap()
-    .expect("no element with id webgl-root")
-    .dyn_into::<HtmlCanvasElement>()
-    .unwrap()
-    .get_context("webgl")
-    .expect("no web gl context")
-    .unwrap()
-    .dyn_into::<WebGlRenderingContext>()
-    .unwrap()
+    .ok_or("no document")?
+    .query_selector("canvas")?
+    .ok_or("no canvas")?
+    .dyn_into::<HtmlCanvasElement>()?
+    .get_context("webgl")?
+    .ok_or("no web gl context")?
+    .dyn_into::<WebGlRenderingContext>()?;
+  Ok(gl)
 }
 
 struct Puzzle {
   //pub facets: Vec<Facet>,
   // single polygon
   vertices: u16,
+  camera_transform: Mat4,
+  camera_axis: Vec3,
 }
 
 impl Puzzle {
   pub fn new(count: u16) -> Self {
-    Self { vertices: count }
+    let mut camera_transform = mat4::create();
+    mat4::identity(&mut camera_transform);
+    Self {
+      vertices: count,
+      camera_transform,
+      camera_axis: vec3::create(),
+    }
   }
 
   pub fn get_vertex_count(&self) -> u16 {
@@ -271,7 +277,6 @@ pub struct Facet {
   pub color: Color,
 }
 
-pub struct Vec3(pub [f32; 3]);
 pub struct Color([f32; 4]);
 
 impl Color {
