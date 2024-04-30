@@ -82,6 +82,7 @@ fn get_program(context: &WebGlRenderingContext) -> WebGlProgram {
 
 fn draw(context: &WebGlRenderingContext, vert_count: i32) {
   clear_scene(context);
+  resize_to_screen(context);
   context.draw_arrays(WebGlRenderingContext::TRIANGLES, 0, vert_count);
 }
 
@@ -345,6 +346,17 @@ fn clear_scene(gl: &WebGlRenderingContext) {
   gl.enable(WebGlRenderingContext::DEPTH_TEST);
   gl.depth_func(WebGlRenderingContext::LEQUAL);
   gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT | WebGlRenderingContext::DEPTH_BUFFER_BIT);
+}
+
+fn resize_to_screen(gl: &WebGlRenderingContext) {
+  let canvas = gl
+    .canvas()
+    .unwrap()
+    .dyn_into::<HtmlCanvasElement>()
+    .unwrap();
+  canvas.set_height(canvas.client_height() as u32);
+  canvas.set_width(canvas.client_width() as u32);
+  gl.viewport(0, 0, canvas.client_width(), canvas.client_height());
 }
 
 /*

@@ -73,6 +73,16 @@ const colors = {
 colors satisfies Record<string, Color>;
 type ColorName = keyof typeof colors;
 
+function polygonsToPositions(polygons: Array<Facet>): Float32Array {
+  const positions = [];
+  for (let polygon of polygons) {
+    for (let point of polygon.points) {
+      positions.push(...point);
+    }
+  }
+  return new Float32Array(positions);
+}
+
 // left hand for camera
 const cameraMotions = {
   // wasdqe
@@ -182,19 +192,16 @@ type Action = Axis;
 // it takes 1.6 seconds to rotate the camera 120 degrees
 const CAMERA_SPEED = (2 * Math.PI) / (3 * 1600);
 
-const puzzle = undefined;
-//new Puzzle();
 export function run(gl: WebGLRenderingContext): void {
-  console.log(get_vertex_indices(puzzle));
-
   // setup
   const program = default3DShaderProgram(gl);
   let pieces = initPieces();
-  const indices = get_vertex_indices(puzzle);
+  const polygons = pieces.flatMap((p) => p.facets);
+  const indices = indexPattern(polygons);
   const indexCount = indices.length;
   setVertexIndices(gl, indices);
-  setVertexColors(gl, program, get_vertex_colors());
-  setVertexPositions(gl, program, get_vertex_positions());
+  setVertexColors(gl, program, colorArray(polygons));
+  setVertexPositions(gl, program, polygonsToPositions(polygons));
 
   // state
   const activeCameraAxis = vec3.create();
@@ -241,6 +248,38 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
   };
+
+  function sortPieces(action: Action) {
+    const sorted = [];
+    let i = 0;
+    let j = pieces.length / 2;
+    for (let piece of pieces) {
+      const dotProduct = vec3.dot(axisToVec(action), piece.normal);
+      if (dotProduct > 0) {
+        sorted[i++] = piece;
+      } else {
+        sorted[j++] = piece;
+      }
+    }
+    pieces = sorted;
+    const polygons = pieces.flatMap((p) => p.facets);
+    const indices = indexPattern(polygons);
+    setVertexIndices(gl, indices);
+    setVertexColors(gl, program, colorArray(polygons));
+    setVertexPositions(gl, program, polygonsToPositions(polygons));
+  }
+
+  function rotatePieces(action: Action) {
+    const rotate = rotations[action].rotatePoint;
+    for (let i = 0; i < pieces.length / 2; i++) {
+      const piece = pieces[i];
+      piece.normal = rotate(piece.normal);
+      for (let polygon of piece.facets) {
+        polygon.points = polygon.points.map(rotate);
+      }
+    }
+    setVertexPositions(gl, program, polygonsToPositions(polygons));
+  }
 
   let frame = 0;
   const animationDuration = 400;
@@ -293,6 +332,33 @@ export function run(gl: WebGLRenderingContext): void {
   requestAnimationFrame(render);
 }
 
+function indexPattern(polygons: Facet[]): Uint16Array {
+  const indices: number[] = [];
+  let total = 0;
+  for (let p of polygons) {
+    const vertexCount = p.points.length;
+    for (let i = 0; i < vertexCount - 2; i++) {
+      indices.push(total, total + i + 1, total + i + 2);
+    }
+    total += vertexCount;
+  }
+
+  return new Uint16Array(indices);
+}
+
+function colorArray(polygons: Facet[]): Float32Array {
+  const data: number[] = [];
+
+  for (let i = 0; i < polygons.length; i++) {
+    const c = colors[polygons[i].color];
+    for (let k = 0; k < polygons[i].points.length; k++) {
+      data.push(...c);
+    }
+  }
+
+  return new Float32Array(data);
+}
+
 function initPieces(): Piece[] {
   let a = 1.5;
   let b = Math.sqrt(2) / 2;
@@ -323,7 +389,7 @@ function initPieces(): Piece[] {
   const tr2 = rotateZ(tr1);
   const tr3 = rotateZ(tr2);
   const tr4 = rotateZ(tr3);
-  /*
+
   const h1 = (
     [
       [c, 0, c],
@@ -334,7 +400,6 @@ function initPieces(): Piece[] {
       [c, c, 0],
     ] as Point[]
   ).map(rotatePointY);
-  */
   // squares
   const s1: Point[] = [
     [b, 0, a],
