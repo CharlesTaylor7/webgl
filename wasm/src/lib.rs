@@ -70,53 +70,6 @@ fn start() -> Result<(), JsValue> {
   let program = link_program(&gl, &vert_shader, &frag_shader)?;
   gl.use_program(Some(&program));
   Ok(())
-  /*
-
-
-      let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
-
-      let position_attribute_location = context.get_attrib_location(&program, "position");
-      let buffer = context.create_buffer().ok_or("Failed to create buffer")?;
-      context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
-
-      // Note that `Float32Array::view` is somewhat dangerous (hence the
-      // `unsafe`!). This is creating a raw view into our module's
-      // `WebAssembly.Memory` buffer, but if we allocate more pages for ourself
-      // (aka do a memory allocation in Rust) it'll cause the buffer to change,
-      // causing the `Float32Array` to be invalid.
-      //
-      // As a result, after `Float32Array::view` we have to be very careful not to
-      // do any memory allocations before it's dropped.
-      unsafe {
-          let positions_array_buf_view = js_sys::Float32Array::view(&vertices);
-
-          context.buffer_data_with_array_buffer_view(
-              WebGl2RenderingContext::ARRAY_BUFFER,
-              &positions_array_buf_view,
-              WebGl2RenderingContext::STATIC_DRAW,
-          );
-      }
-
-      let vao = context
-          .create_vertex_array()
-          .ok_or("Could not create vertex array object")?;
-      context.bind_vertex_array(Some(&vao));
-
-      context.vertex_attrib_pointer_with_i32(
-          position_attribute_location as u32,
-          3,
-          WebGl2RenderingContext::FLOAT,
-          false,
-          0,
-          0,
-      );
-      context.enable_vertex_attrib_array(position_attribute_location as u32);
-
-      context.bind_vertex_array(Some(&vao));
-
-      let vert_count = (vertices.len() / 3) as i32;
-      draw(&context, vert_count);
-  */
 }
 
 fn get_program(context: &WebGlRenderingContext) -> WebGlProgram {
@@ -128,8 +81,7 @@ fn get_program(context: &WebGlRenderingContext) -> WebGlProgram {
 }
 
 fn draw(context: &WebGlRenderingContext, vert_count: i32) {
-  context.clear_color(0.0, 0.0, 0.0, 1.0);
-  context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+  clear_scene(context);
   context.draw_arrays(WebGlRenderingContext::TRIANGLES, 0, vert_count);
 }
 
@@ -385,6 +337,14 @@ fn get_projection_matrix(gl: &WebGlRenderingContext, dest: &mut Mat4) {
   let mut t = mat4::create();
   mat4::from_translation(&mut t, &[0.0, 0.0, -6.0]);
   mat4::multiply(dest, &p, &t);
+}
+
+fn clear_scene(gl: &WebGlRenderingContext) {
+  gl.clear_color(0.0, 0.0, 0.0, 1.0);
+  gl.clear_depth(1.0);
+  gl.enable(WebGlRenderingContext::DEPTH_TEST);
+  gl.depth_func(WebGlRenderingContext::LEQUAL);
+  gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT | WebGlRenderingContext::DEPTH_BUFFER_BIT);
 }
 
 /*
