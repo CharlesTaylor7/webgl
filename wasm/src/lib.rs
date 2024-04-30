@@ -1,24 +1,24 @@
-#![feature(const_fn_floating_point_arithmetic)]
+#![feature(const_fn_floating_point_arithmetic, const_refs_to_static)]
 #![allow(dead_code)]
 use gl_matrix::common::{Mat4, Vec3, PI};
 use gl_matrix::{mat4, vec3};
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
-use web_sys::js_sys::{Array, Float32Array, Uint16Array};
+use web_sys::js_sys::{Float32Array, Uint16Array};
 use web_sys::{
   console, window, HtmlCanvasElement, HtmlElement, KeyboardEvent, WebGlProgram,
   WebGlRenderingContext, WebGlShader,
 };
 
 thread_local! {
-    pub static PUZZLE: RefCell<Puzzle> = init_puzzle();
+    pub static STATE: RefCell<State> = init_state();
     pub static KEYMAP: Keymap = init_keymap();
+    pub static PROJECTION: Mat4 = init_projection();
 }
 
-fn init_puzzle() -> RefCell<Puzzle> {
-  RefCell::new(Puzzle::new(6))
+fn init_state() -> RefCell<State> {
+  RefCell::new(State::new(6))
 }
 
 fn init_keymap() -> Keymap {
@@ -30,6 +30,13 @@ fn init_keymap() -> Keymap {
     ("q", CameraMotion::new(Orientation::Positive, Axis::Z)),
     ("e", CameraMotion::new(Orientation::Negative, Axis::Z)),
   ])
+}
+
+fn init_projection() -> Mat4 {
+  let gl = webgl_context().unwrap();
+  let mut m = mat4::create();
+  get_projection_matrix(&gl, &mut m);
+  m
 }
 
 type Result<T, E = JsValue> = std::result::Result<T, E>;
@@ -54,14 +61,34 @@ impl CameraMotion {
   }
 }
 
+const ANIMATION_DURATION: f32 = 400.0;
+
+// it takes 1.6 seconds to rotate the camera 120 degrees
+const CAMERA_SPEED: f32 = (2.0 * PI) / (3.0 * 1600.0);
+
 #[wasm_bindgen]
-pub fn render(ms: f64) -> Result<()> {
+pub fn render(ms: f32) -> Result<()> {
   let gl = webgl_context()?;
 
-  let mut m = mat4::create();
-  get_projection_matrix(&gl, &mut m);
-  PUZZLE.with_borrow(|p: &Puzzle| {
-    set_transform_matrix(&gl, &m);
+  STATE.with_borrow_mut(|p| {
+    let delta = ms - p.then;
+    p.then = ms;
+
+    /*
+    getDefaultProjectionMatrix(gl, transform);
+    mat4.multiply(transform, transform, cameraRotation);
+    setTransformMatrix(gl, program, transform);
+    */
+
+    if p.camera_axis.iter().any(|c| *c != 0.0) {
+      let mut transform = mat4::create();
+      mat4::from_rotation(&mut transform, delta * CAMERA_SPEED, &p.camera_axis);
+      let mut camera = mat4::create();
+      mat4::multiply(&mut camera, &transform, &p.camera_transform);
+      p.camera_transform = camera;
+    }
+
+    //set_transform_matrix(&gl, &m);
     set_vertex_colors(&gl, &p.get_vertex_colors());
     set_vertex_indices(&gl, &p.get_vertex_indices());
     set_vertex_positions(&gl, &p.get_vertex_positions());
@@ -81,7 +108,7 @@ pub fn render(ms: f64) -> Result<()> {
 pub fn on_key_down(event: &KeyboardEvent) {
   console::log_2(&JsValue::from("keydown"), &JsValue::from(event));
   KEYMAP.with(|keymap| {
-    PUZZLE.with_borrow_mut(|puzzle| {
+    STATE.with_borrow_mut(|state| {
       let key: String = event.key();
       let b: &str = &key;
       if let Some(CameraMotion { axis, orientation }) = keymap.get(b) {
@@ -91,22 +118,22 @@ pub fn on_key_down(event: &KeyboardEvent) {
         };
         match axis {
           Axis::X => {
-            puzzle.camera_axis[0] = val;
+            state.camera_axis[0] = val;
           }
           Axis::Y => {
-            puzzle.camera_axis[1] = val;
+            state.camera_axis[1] = val;
           }
           Axis::Z => {
-            puzzle.camera_axis[2] = val;
+            state.camera_axis[2] = val;
           }
         }
       }
 
       console::log_4(
         &JsValue::from("camera_axis"),
-        &JsValue::from(puzzle.camera_axis[0]),
-        &JsValue::from(puzzle.camera_axis[1]),
-        &JsValue::from(puzzle.camera_axis[2]),
+        &JsValue::from(state.camera_axis[0]),
+        &JsValue::from(state.camera_axis[1]),
+        &JsValue::from(state.camera_axis[2]),
       );
     })
   })
@@ -116,28 +143,28 @@ pub fn on_key_down(event: &KeyboardEvent) {
 pub fn on_key_up(event: &KeyboardEvent) {
   console::log_2(&JsValue::from("keyup"), &JsValue::from(event));
   KEYMAP.with(|keymap| {
-    PUZZLE.with_borrow_mut(|puzzle| {
+    STATE.with_borrow_mut(|state| {
       let key: String = event.key();
       let b: &str = &key;
       if let Some(CameraMotion { axis, .. }) = keymap.get(b) {
         match axis {
           Axis::X => {
-            puzzle.camera_axis[0] = 0.0;
+            state.camera_axis[0] = 0.0;
           }
           Axis::Y => {
-            puzzle.camera_axis[1] = 0.0;
+            state.camera_axis[1] = 0.0;
           }
           Axis::Z => {
-            puzzle.camera_axis[2] = 0.0;
+            state.camera_axis[2] = 0.0;
           }
         }
       }
 
       console::log_4(
         &JsValue::from("camera_axis"),
-        &JsValue::from(puzzle.camera_axis[0]),
-        &JsValue::from(puzzle.camera_axis[1]),
-        &JsValue::from(puzzle.camera_axis[2]),
+        &JsValue::from(state.camera_axis[0]),
+        &JsValue::from(state.camera_axis[1]),
+        &JsValue::from(state.camera_axis[2]),
       );
     })
   });
@@ -290,15 +317,17 @@ pub fn webgl_context() -> Result<WebGlRenderingContext> {
   Ok(gl)
 }
 
-struct Puzzle {
+struct State {
   //pub facets: Vec<Facet>,
   // single polygon
   vertices: u16,
   camera_transform: Mat4,
   camera_axis: Vec3,
+  frame: f32,
+  then: f32,
 }
 
-impl Puzzle {
+impl State {
   pub fn new(count: u16) -> Self {
     let mut camera_transform = mat4::create();
     mat4::identity(&mut camera_transform);
@@ -306,6 +335,8 @@ impl Puzzle {
       vertices: count,
       camera_transform,
       camera_axis: vec3::create(),
+      frame: 0.0,
+      then: 0.0,
     }
   }
 
