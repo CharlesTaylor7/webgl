@@ -98,28 +98,6 @@ export function rgb(red: number, green: number, blue: number): Color {
   return [red / 255, green / 255, blue / 255, 1.0] as Color;
 }
 
-const default3DVertexShader = `
-  attribute vec4 vertexPosition;
-  attribute vec4 vertexColor;
-
-  uniform mat4 transformMatrix;
-
-  varying lowp vec4 fragmentColor;
-
-  void main(void) {
-    gl_Position = transformMatrix * vertexPosition;
-    fragmentColor = vertexColor;
-  }
-`;
-
-const default3DFragmentShader = `
-  varying lowp vec4 fragmentColor;
-
-  void main(void) {
-    gl_FragColor = fragmentColor;
-  }
-`;
-
 export function drawElements(
   gl: WebGLRenderingContext,
   mode: GLenum,

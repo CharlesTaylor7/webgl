@@ -1,9 +1,11 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![allow(dead_code)]
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use wasm_bindgen::prelude::*;
-use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader, window, HtmlCanvasElement, WebGlRenderingContext};
-use web_sys::js_sys::{Float32Array, Uint16Array};
-use web_sys::js_sys;
+use web_sys::{console, WebGlProgram, WebGlShader, window, HtmlCanvasElement, WebGlRenderingContext};
+use web_sys::js_sys::{Float32Array, Function, Uint16Array};
 
 /* TODO
  * port web gl utils 
@@ -11,56 +13,56 @@ use web_sys::js_sys;
  *
  */
 
-#[wasm_bindgen]
-extern {
-  #[wasm_bindgen(js_name = log, js_namespace = console)]
-  fn console_log(s: &str);
 
-  #[wasm_bindgen(js_name = error, js_namespace = console)]
-  fn console_error(s: &str);
+#[wasm_bindgen]
+pub fn render(ms: f64) {
+    console::log_2(&JsValue::from("Hello"), &JsValue::from(ms));
 }
 
+
+const VERTEX_SHADER: &str = r##"
+  attribute vec4 vertexPosition;
+  attribute vec4 vertexColor;
+
+  uniform mat4 transformMatrix;
+
+  varying lowp vec4 fragmentColor;
+
+  void main(void) {
+    gl_Position = transformMatrix * vertexPosition;
+    fragmentColor = vertexColor;
+  }
+"##;
+
+const FRAGMENT_SHADER: &str = r##"
+  varying lowp vec4 fragmentColor;
+
+  void main(void) {
+    gl_FragColor = fragmentColor;
+  }
+"##;
 
 
 #[wasm_bindgen(start)]
 fn start() -> Result<(), JsValue> {
     let context = webgl_context();
-    ()
-/*
-    let context = canvas
-        .get_context("webgl2")?
-        .unwrap()
-        .dyn_into::<WebGl2RenderingContext>()?;
+    console::log_1(&context);
 
     let vert_shader = compile_shader(
         &context,
-        WebGl2RenderingContext::VERTEX_SHADER,
-        r##"#version 300 es
- 
-        in vec4 position;
-
-        void main() {
-        
-            gl_Position = position;
-        }
-        "##,
+        WebGlRenderingContext::VERTEX_SHADER,
+        VERTEX_SHADER,
     )?;
 
     let frag_shader = compile_shader(
         &context,
-        WebGl2RenderingContext::FRAGMENT_SHADER,
-        r##"#version 300 es
-    
-        precision highp float;
-        out vec4 outColor;
-        
-        void main() {
-            outColor = vec4(1, 1, 1, 1);
-        }
-        "##,
+        WebGlRenderingContext::FRAGMENT_SHADER,
+        FRAGMENT_SHADER,
     )?;
     let program = link_program(&context, &vert_shader, &frag_shader)?;
     context.use_program(Some(&program));
+    Ok(())
+    /*
 
     let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
 
@@ -105,20 +107,18 @@ fn start() -> Result<(), JsValue> {
 
     let vert_count = (vertices.len() / 3) as i32;
     draw(&context, vert_count);
-
-    Ok(())
-        */
+*/
 }
 
-fn draw(context: &WebGl2RenderingContext, vert_count: i32) {
-    context.clear_color(0.0, 0.0, 0.0, 1.0);
-    context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
-    context.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, vert_count);
+fn draw(context: &WebGlRenderingContext, vert_count: i32) {
+    context.clear_color(0.0, 0.0, 0.0, 1.0);
+    context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+    context.draw_arrays(WebGlRenderingContext::TRIANGLES, 0, vert_count);
 }
 
 pub fn compile_shader(
-    context: &WebGl2RenderingContext,
+    context: &WebGlRenderingContext,
     shader_type: u32,
     source: &str,
 ) -> Result<WebGlShader, String> {
@@ -129,7 +129,7 @@ pub fn compile_shader(
     context.compile_shader(&shader);
 
     if context
-        .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
+        .get_shader_parameter(&shader, WebGlRenderingContext::COMPILE_STATUS)
         .as_bool()
         .unwrap_or(false)
     {
@@ -142,7 +142,7 @@ pub fn compile_shader(
 }
 
 pub fn link_program(
-    context: &WebGl2RenderingContext,
+    context: &WebGlRenderingContext,
     vert_shader: &WebGlShader,
     frag_shader: &WebGlShader,
 ) -> Result<WebGlProgram, String> {
@@ -155,7 +155,7 @@ pub fn link_program(
     context.link_program(&program);
 
     if context
-        .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
+        .get_program_parameter(&program, WebGlRenderingContext::LINK_STATUS)
         .as_bool()
         .unwrap_or(false)
     {
