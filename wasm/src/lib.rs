@@ -2,18 +2,56 @@
 #![allow(dead_code)]
 use gl_matrix::common::{Mat4, Vec3, PI};
 use gl_matrix::{mat4, vec3};
+use std::borrow::Borrow;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
-use web_sys::js_sys::{Float32Array, Uint16Array};
+use web_sys::js_sys::{Array, Float32Array, Uint16Array};
 use web_sys::{
   console, window, HtmlCanvasElement, HtmlElement, KeyboardEvent, WebGlProgram,
   WebGlRenderingContext, WebGlShader,
 };
 
+thread_local! {
+    pub static PUZZLE: RefCell<Puzzle> = init_puzzle();
+    pub static KEYMAP: Keymap = init_keymap();
+}
+
+fn init_puzzle() -> RefCell<Puzzle> {
+  RefCell::new(Puzzle::new(6))
+}
+
+fn init_keymap() -> Keymap {
+  HashMap::from([
+    ("w", CameraMotion::new(Orientation::Negative, Axis::X)),
+    ("a", CameraMotion::new(Orientation::Negative, Axis::Y)),
+    ("s", CameraMotion::new(Orientation::Positive, Axis::X)),
+    ("d", CameraMotion::new(Orientation::Positive, Axis::Y)),
+    ("q", CameraMotion::new(Orientation::Positive, Axis::Z)),
+    ("e", CameraMotion::new(Orientation::Negative, Axis::Z)),
+  ])
+}
+
 type Result<T, E = JsValue> = std::result::Result<T, E>;
 
-thread_local! {
-    pub static PUZZLE: RefCell<Puzzle> = RefCell::new(Puzzle::new(6));
+type Keymap = HashMap<&'static str, CameraMotion>;
+enum Axis {
+  X,
+  Y,
+  Z,
+}
+enum Orientation {
+  Positive,
+  Negative,
+}
+struct CameraMotion {
+  axis: Axis,
+  orientation: Orientation,
+}
+impl CameraMotion {
+  fn new(orientation: Orientation, axis: Axis) -> Self {
+    Self { orientation, axis }
+  }
 }
 
 #[wasm_bindgen]
@@ -40,13 +78,69 @@ pub fn render(ms: f64) -> Result<()> {
 }
 
 #[wasm_bindgen]
-pub fn on_key_down(event: KeyboardEvent) {
+pub fn on_key_down(event: &KeyboardEvent) {
   console::log_2(&JsValue::from("keydown"), &JsValue::from(event));
+  KEYMAP.with(|keymap| {
+    PUZZLE.with_borrow_mut(|puzzle| {
+      let key: String = event.key();
+      let b: &str = &key;
+      if let Some(CameraMotion { axis, orientation }) = keymap.get(b) {
+        let val = match orientation {
+          Orientation::Positive => 1.0,
+          Orientation::Negative => -1.0,
+        };
+        match axis {
+          Axis::X => {
+            puzzle.camera_axis[0] = val;
+          }
+          Axis::Y => {
+            puzzle.camera_axis[1] = val;
+          }
+          Axis::Z => {
+            puzzle.camera_axis[2] = val;
+          }
+        }
+      }
+
+      console::log_4(
+        &JsValue::from("camera_axis"),
+        &JsValue::from(puzzle.camera_axis[0]),
+        &JsValue::from(puzzle.camera_axis[1]),
+        &JsValue::from(puzzle.camera_axis[2]),
+      );
+    })
+  })
 }
 
 #[wasm_bindgen]
-pub fn on_key_up(event: KeyboardEvent) {
+pub fn on_key_up(event: &KeyboardEvent) {
   console::log_2(&JsValue::from("keyup"), &JsValue::from(event));
+  KEYMAP.with(|keymap| {
+    PUZZLE.with_borrow_mut(|puzzle| {
+      let key: String = event.key();
+      let b: &str = &key;
+      if let Some(CameraMotion { axis, .. }) = keymap.get(b) {
+        match axis {
+          Axis::X => {
+            puzzle.camera_axis[0] = 0.0;
+          }
+          Axis::Y => {
+            puzzle.camera_axis[1] = 0.0;
+          }
+          Axis::Z => {
+            puzzle.camera_axis[2] = 0.0;
+          }
+        }
+      }
+
+      console::log_4(
+        &JsValue::from("camera_axis"),
+        &JsValue::from(puzzle.camera_axis[0]),
+        &JsValue::from(puzzle.camera_axis[1]),
+        &JsValue::from(puzzle.camera_axis[2]),
+      );
+    })
+  });
 }
 
 /*
