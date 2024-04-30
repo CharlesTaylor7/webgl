@@ -10,9 +10,6 @@
       await init();
       const canvas = document.querySelector("#webgl-root");
       function loop(ms) {
-        canvas.height = canvas.clientHeight;
-        canvas.width = canvas.clientWidth;
-        console.log(canvas);
         render(ms);
         requestAnimationFrame(loop);
       }
