@@ -336,6 +336,22 @@ impl State {
   pub fn new() -> Self {
     let mut camera_transform = mat4::create();
     mat4::identity(&mut camera_transform);
+    Self {
+      camera_transform,
+      camera_axis: vec3::create(),
+      frame: 0.0,
+      then: 0.0,
+      facets: Self::init_facets(),
+    }
+  }
+
+  fn init_facets() -> Vec<Facet> {
+    // 8 hexagonal faces
+    // each hexagon is split into 3 trapezoid facets and 1 center triangle
+    // 6 square faces
+    // 4 cross sections
+    let mut facets = Vec::with_capacity(4 * 8 + 6 + 4);
+
     // depth of a square from the center of the puzzle
     let a = 1.5;
     // square sidelength
@@ -349,23 +365,21 @@ impl State {
       -b, 0., a, //
       0., -b, a, //
     ];
-    let facet = Facet {
+    let square1 = Facet {
       normal: [0.0, 0.0, 1.0],
       color: Color::WHITE,
       mesh: mesh.to_vec(),
     };
+    let mut rot = mat4::create();
+    mat4::from_x_rotation(&mut rot, PI / 2.0);
+    console::log_1(&JsValue::from("from_x_rotation"));
+    let mut square2 = square1.clone();
+    square2.transform(&rot);
+    console::log_1(&JsValue::from("transform"));
 
-    console::log_2(
-      &JsValue::from("facet vertex count"),
-      &JsValue::from(facet.get_vertex_count()),
-    );
-    Self {
-      camera_transform,
-      camera_axis: vec3::create(),
-      frame: 0.0,
-      then: 0.0,
-      facets: vec![facet],
-    }
+    facets.push(square1);
+    facets.push(square2);
+    facets
   }
 
   pub fn get_vertex_count(&self) -> u32 {
@@ -401,8 +415,12 @@ impl State {
   pub fn get_vertex_colors(&self) -> Float32Array {
     // n vertices times 4 rgba values
     let array = Float32Array::new_with_length(((self.get_vertex_count()) * 4).into());
-    for i in 0..self.get_vertex_count() {
-      Color::MAGENTA.write_to(&array, (4 * i).into());
+    let mut i = 0;
+    for facet in self.facets.iter() {
+      for _ in 0..self.get_vertex_count() {
+        facet.color.write_to(&array, 4 * i);
+        i += 1;
+      }
     }
 
     console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
@@ -457,15 +475,27 @@ impl Facet {
   pub fn transform(&mut self, matrix: &Mat4) {
     let mut temp = [0.0_f32; 3];
     vec3::transform_mat4(&mut temp, &self.normal, matrix);
+
+    console::log_1(&JsValue::from("rotate normal"));
     self.normal = temp;
 
-    let n = self.mesh.len();
+    let n = self.mesh.len() / 3;
+
+    console::log_2(&JsValue::from("start loop"), &JsValue::from(n));
     for i in 0..n {
       let slice: &mut [f32] = self.mesh[3 * i..3 * i + 3].borrow_mut();
+      console::log_1(&JsValue::from("borrow"));
       vec3::transform_mat4(&mut temp, &slice.try_into().unwrap(), matrix);
-      slice.copy_from_slice(temp.as_slice())
+      slice.copy_from_slice(temp.as_slice());
+      console::log_2(
+        &JsValue::from("rotate slice"),
+        &JsValue::from(Float32Array::from(slice.to_owned().as_slice())),
+      );
     }
+
+    console::log_2(&JsValue::from("finish loop"), &JsValue::from(n));
   }
+
   pub fn get_vertex_count(&self) -> u32 {
     self.mesh.len() as u32 / 3
   }
