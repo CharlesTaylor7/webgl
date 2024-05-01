@@ -5,7 +5,7 @@ use gl_matrix::{mat4, vec3};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
-use web_sys::js_sys::{Float32Array, Uint16Array};
+use web_sys::js_sys::{Float32Array, Uint32Array};
 use web_sys::{
   console, window, HtmlCanvasElement, HtmlElement, KeyboardEvent, WebGlProgram,
   WebGlRenderingContext, WebGlShader,
@@ -74,8 +74,8 @@ pub fn render(ms: f32) -> Result<()> {
     let delta = ms - p.then;
     p.then = ms;
 
-    let mut transform = mat4::create();
     if p.camera_axis.iter().any(|c| *c != 0.0) {
+        let mut transform = mat4::create();
       mat4::from_rotation(&mut transform, delta * CAMERA_SPEED, &p.camera_axis);
       let mut camera = mat4::create();
       mat4::multiply(&mut camera, &transform, &p.camera_transform);
@@ -94,8 +94,8 @@ pub fn render(ms: f32) -> Result<()> {
     resize_to_screen(&gl);
     gl.draw_elements_with_i32(
       WebGlRenderingContext::TRIANGLES,
-      p.get_index_count().into(),
-      WebGlRenderingContext::UNSIGNED_SHORT,
+      p.get_index_count() as i32,
+      WebGlRenderingContext::UNSIGNED_INT,
       0,
     );
   });
@@ -231,6 +231,9 @@ const FRAGMENT_SHADER: &str = r##"
 #[wasm_bindgen(start)]
 fn start() -> Result<()> {
   let gl = webgl_context()?;
+  // enable u32 type
+  gl.get_extension("OES_element_index_uint")?;
+
   let vertex_shader = compile_shader(&gl, WebGlRenderingContext::VERTEX_SHADER, VERTEX_SHADER)?;
   let fragment_shader =
     compile_shader(&gl, WebGlRenderingContext::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
@@ -322,7 +325,7 @@ pub fn webgl_context() -> Result<WebGlRenderingContext> {
 struct State {
   //pub facets: Vec<Facet>,
   // single polygon
-  vertices: u16,
+  vertices: u32,
   camera_transform: Mat4,
   camera_axis: Vec3,
   frame: f32,
@@ -330,7 +333,7 @@ struct State {
 }
 
 impl State {
-  pub fn new(count: u16) -> Self {
+  pub fn new(count: u32) -> Self {
     let mut camera_transform = mat4::create();
     mat4::identity(&mut camera_transform);
     Self {
@@ -342,24 +345,87 @@ impl State {
     }
   }
 
-  pub fn get_vertex_count(&self) -> u16 {
+  pub fn get_vertex_count(&self) -> u32 {
     self.vertices
   }
 
-  pub fn get_index_count(&self) -> u16 {
+  pub fn get_index_count(&self) -> u32 {
     3 * (self.vertices - 2)
   }
 
-  pub fn get_vertex_indices(&self) -> Uint16Array {
-    let array = Uint16Array::new_with_length((self.get_index_count()).into());
+  pub fn get_vertex_indices(&self) -> Uint32Array {
+    let array = Uint32Array::new_with_length((self.get_index_count()).into());
     let mut n: u32 = 0;
-    let mut i: u16 = 0;
+    let mut i: u32 = 0;
     while i < self.vertices - 2 {
-      Uint16Array::set_index(&array, n, 0);
+      Uint32Array::set_index(&array, n, 0);
       n += 1;
-      Uint16Array::set_index(&array, n, i + 1);
+      Uint32Array::set_index(&array, n, i + 1);
       n += 1;
-      Uint16Array::set_index(&array, n, i + 2);
+      Uint32Array::set_index(&array, n, i + 2);
+      n += 1;
+      i += 1;
+    }
+    //console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
+    array
+  }
+
+  pub fn get_vertex_colors(&self) -> Float32Array {
+    // n vertices times 4 rgba values
+    let array = Float32Array::new_with_length(((self.vertices) * 4).into());
+    for i in 0..self.vertices {
+      Color::MAGENTA.write_to(&array, (4 * i).into());
+    }
+
+    // console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
+    array
+  }
+
+  pub fn get_vertex_positions(&self) -> Float32Array {
+    let array = Float32Array::new_with_length((self.vertices * 3).into());
+    for i in 0..self.vertices {
+      let rads: f32 = 2.0 * PI * (i as f32) / (self.vertices as f32);
+      Point([rads.cos(), rads.sin(), 0.0]).write_to(&array, (i * 3).into())
+    }
+    // console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
+    array
+  }
+}
+
+pub struct Point([f32; 3]);
+impl Point {
+  pub fn write_to(&self, array: &Float32Array, start: u32) {
+    Float32Array::set_index(array, start, self.0[0]);
+    Float32Array::set_index(array, start + 1, self.0[1]);
+    Float32Array::set_index(array, start + 2, self.0[2]);
+  }
+}
+
+pub struct Facet {
+  pub mesh: Float32Array,
+  pub normal: Vec3,
+  pub color: Color,
+}
+/*
+impl Facet {
+  pub fn get_vertex_count(&self) -> u32 {
+    self.mesh.length() / 3
+  }
+
+  pub fn get_index_count(&self) -> u32 {
+    3 * (self.vertices - 2)
+  }
+
+  pub fn get_vertex_indices(&self) -> Uint32Array {
+    let array = Uint32Array::new_with_length((self.get_index_count()).into());
+    let mut n: u32 = 0;
+    let mut i: u32 = 0;
+    while i < self.vertices - 2 {
+      Uint32Array::set_index(&array, n, 0);
+      n += 1;
+      Uint32Array::set_index(&array, n, i + 1);
+      n += 1;
+      Uint32Array::set_index(&array, n, i + 2);
       n += 1;
       i += 1;
     }
@@ -387,22 +453,9 @@ impl State {
     // console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
     array
   }
-}
 
-pub struct Point([f32; 3]);
-impl Point {
-  pub fn write_to(&self, array: &Float32Array, start: u32) {
-    Float32Array::set_index(array, start, self.0[0]);
-    Float32Array::set_index(array, start + 1, self.0[1]);
-    Float32Array::set_index(array, start + 2, self.0[2]);
-  }
 }
-
-pub struct Facet {
-  pub mesh: Float32Array,
-  pub normal: Vec3,
-  pub color: Color,
-}
+*/
 
 pub struct Color([f32; 4]);
 
@@ -497,7 +550,7 @@ fn set_vertex_colors(gl: &WebGlRenderingContext, colors: &Float32Array) {
   gl.enable_vertex_attrib_array(attribute_index);
 }
 
-fn set_vertex_indices(gl: &WebGlRenderingContext, indices: &Uint16Array) {
+fn set_vertex_indices(gl: &WebGlRenderingContext, indices: &Uint32Array) {
   let buffer = gl.create_buffer();
   gl.bind_buffer(WebGlRenderingContext::ELEMENT_ARRAY_BUFFER, buffer.as_ref());
   gl.buffer_data_with_opt_array_buffer(
@@ -551,19 +604,3 @@ fn resize_to_screen(gl: &WebGlRenderingContext) {
   canvas.set_width(canvas.client_width() as u32);
   gl.viewport(0, 0, canvas.client_width(), canvas.client_height());
 }
-
-/*
-function indexPattern(polygons: Facet[]): Uint16Array {
-  const indices: number[] = [];
-  let total = 0;
-  for (let p of polygons) {
-    const vertexCount = p.points.length;
-    for (let i = 0; i < vertexCount - 2; i++) {
-      indices.push(total, total + i + 1, total + i + 2);
-    }
-    total += vertexCount;
-  }
-
-  return new Uint16Array(indices);
-}
-*/
