@@ -1,5 +1,4 @@
 #![feature(const_fn_floating_point_arithmetic, const_refs_to_static)]
-#![allow(dead_code)]
 use gl_matrix::common::{Mat4, Vec3, PI};
 use gl_matrix::{mat4, vec3};
 use std::borrow::BorrowMut;
@@ -13,9 +12,9 @@ use web_sys::{
 };
 
 thread_local! {
-    pub static STATE: RefCell<State> = init_state();
-    pub static KEYMAP: Keymap = init_keymap();
-    pub static PROJECTION: Mat4 = init_projection();
+  static STATE: RefCell<State> = init_state();
+  static KEYMAP: Keymap = init_keymap();
+  static PROJECTION: Mat4 = init_projection();
 }
 
 fn init_state() -> RefCell<State> {
@@ -256,7 +255,7 @@ fn get_program(context: &WebGlRenderingContext) -> WebGlProgram {
     .unwrap()
 }
 
-pub fn compile_shader(
+fn compile_shader(
   context: &WebGlRenderingContext,
   shader_type: u32,
   source: &str,
@@ -282,7 +281,7 @@ pub fn compile_shader(
   }
 }
 
-pub fn link_program(
+fn link_program(
   context: &WebGlRenderingContext,
   vert_shader: &WebGlShader,
   frag_shader: &WebGlShader,
@@ -310,7 +309,7 @@ pub fn link_program(
   }
 }
 
-pub fn webgl_context() -> Result<WebGlRenderingContext> {
+fn webgl_context() -> Result<WebGlRenderingContext> {
   let gl = window()
     .ok_or("no window")?
     .document()
@@ -324,6 +323,7 @@ pub fn webgl_context() -> Result<WebGlRenderingContext> {
   Ok(gl)
 }
 
+#[allow(dead_code)]
 struct State {
   facets: Vec<Facet>,
   camera_transform: Mat4,
@@ -333,7 +333,7 @@ struct State {
 }
 
 impl State {
-  pub fn new() -> Self {
+  fn new() -> Self {
     let mut camera_transform = mat4::create();
     mat4::identity(&mut camera_transform);
     Self {
@@ -356,9 +356,9 @@ impl State {
     let a = 1.5;
     // square sidelength
     let b = 2.0_f32.sqrt() / 2.0;
-    let c = (a + b) / 2.0;
+    let _c = (a + b) / 2.0;
     // border width
-    let w = 0.1;
+    let _w = 0.1;
     let mesh = [
       b, 0., a, //
       0., b, a, //
@@ -382,15 +382,15 @@ impl State {
     facets
   }
 
-  pub fn get_vertex_count(&self) -> u32 {
+  fn get_vertex_count(&self) -> u32 {
     self.facets.iter().map(|f| f.get_vertex_count()).sum()
   }
 
-  pub fn get_index_count(&self) -> u32 {
+  fn get_index_count(&self) -> u32 {
     self.facets.iter().map(|f| f.get_index_count()).sum()
   }
 
-  pub fn get_vertex_indices(&self) -> Uint32Array {
+  fn get_vertex_indices(&self) -> Uint32Array {
     let array = Uint32Array::new_with_length((self.get_index_count()).into());
     let mut n: u32 = 0;
     let mut i: u32 = 0;
@@ -412,7 +412,7 @@ impl State {
     array
   }
 
-  pub fn get_vertex_colors(&self) -> Float32Array {
+  fn get_vertex_colors(&self) -> Float32Array {
     // n vertices times 4 rgba values
     let array = Float32Array::new_with_length(((self.get_vertex_count()) * 4).into());
     let mut i = 0;
@@ -427,7 +427,7 @@ impl State {
     array
   }
 
-  pub fn get_vertex_positions(&self) -> Float32Array {
+  fn get_vertex_positions(&self) -> Float32Array {
     let mut vector = vec![0.0; self.get_vertex_count() as usize * 3];
 
     console::log_2(&JsValue::from("vector.len"), &JsValue::from(vector.len()));
@@ -456,88 +456,53 @@ impl State {
   }
 }
 
-pub struct Point([f32; 3]);
+/*
+struct Point([f32; 3]);
 impl Point {
-  pub fn write_to(&self, array: &Float32Array, start: u32) {
+  fn write_to(&self, array: &Float32Array, start: u32) {
     Float32Array::set_index(array, start, self.0[0]);
     Float32Array::set_index(array, start + 1, self.0[1]);
     Float32Array::set_index(array, start + 2, self.0[2]);
   }
 }
+*/
 
 #[derive(Clone)]
-pub struct Facet {
-  pub mesh: Vec<f32>,
-  pub normal: Vec3,
-  pub color: Color,
+struct Facet {
+  mesh: Vec<f32>,
+  normal: Vec3,
+  color: Color,
 }
 impl Facet {
-  pub fn transform(&mut self, matrix: &Mat4) {
+  fn transform(&mut self, matrix: &Mat4) {
     let mut temp = [0.0_f32; 3];
     vec3::transform_mat4(&mut temp, &self.normal, matrix);
-
-    console::log_1(&JsValue::from("rotate normal"));
     self.normal = temp;
 
     let n = self.mesh.len() / 3;
 
-    console::log_2(&JsValue::from("start loop"), &JsValue::from(n));
     for i in 0..n {
       let slice: &mut [f32] = self.mesh[3 * i..3 * i + 3].borrow_mut();
-      console::log_1(&JsValue::from("borrow"));
       vec3::transform_mat4(&mut temp, &slice.try_into().unwrap(), matrix);
       slice.copy_from_slice(temp.as_slice());
-      console::log_2(
-        &JsValue::from("rotate slice"),
-        &JsValue::from(Float32Array::from(slice.to_owned().as_slice())),
-      );
     }
-
-    console::log_2(&JsValue::from("finish loop"), &JsValue::from(n));
   }
 
-  pub fn get_vertex_count(&self) -> u32 {
+  fn get_vertex_count(&self) -> u32 {
     self.mesh.len() as u32 / 3
   }
 
-  pub fn get_index_count(&self) -> u32 {
+  fn get_index_count(&self) -> u32 {
     3 * (self.get_vertex_count() - 2)
-  }
-
-  pub fn get_vertex_indices(&self) -> Uint32Array {
-    let array = Uint32Array::new_with_length((self.get_index_count()).into());
-    let mut n: u32 = 0;
-    let mut i: u32 = 0;
-    while i < self.get_vertex_count() - 2 {
-      Uint32Array::set_index(&array, n, 0);
-      n += 1;
-      Uint32Array::set_index(&array, n, i + 1);
-      n += 1;
-      Uint32Array::set_index(&array, n, i + 2);
-      n += 1;
-      i += 1;
-    }
-    //console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
-    array
-  }
-
-  pub fn get_vertex_colors(&self) -> Float32Array {
-    // n vertices times 4 rgba values
-    let array = Float32Array::new_with_length(((self.get_vertex_count()) * 4).into());
-    for i in 0..self.get_vertex_count() {
-      Color::MAGENTA.write_to(&array, (4 * i).into());
-    }
-
-    // console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
-    array
   }
 }
 
 #[derive(Clone)]
-pub struct Color([f32; 4]);
+struct Color([f32; 4]);
 
+#[allow(dead_code)]
 impl Color {
-  pub const fn rgb(red: u8, green: u8, blue: u8) -> Self {
+  const fn rgb(red: u8, green: u8, blue: u8) -> Self {
     Color([
       red as f32 / 255.0,
       green as f32 / 255.0,
@@ -546,7 +511,7 @@ impl Color {
     ])
   }
 
-  pub fn write_to(&self, array: &Float32Array, start: u32) {
+  fn write_to(&self, array: &Float32Array, start: u32) {
     Float32Array::set_index(array, start, self.0[0]);
     Float32Array::set_index(array, start + 1, self.0[1]);
     Float32Array::set_index(array, start + 2, self.0[2]);
