@@ -18,7 +18,7 @@ thread_local! {
 }
 
 fn init_state() -> RefCell<State> {
-  RefCell::new(State::new(6))
+  RefCell::new(State::new())
 }
 
 fn init_keymap() -> Keymap {
@@ -243,6 +243,7 @@ fn start() -> Result<()> {
   PROJECTION.with(|projection| {
     set_transform_matrix(&gl, &projection);
   });
+  //clear_scene(&gl);
   Ok(())
 }
 
@@ -323,9 +324,7 @@ pub fn webgl_context() -> Result<WebGlRenderingContext> {
 }
 
 struct State {
-  //pub facets: Vec<Facet>,
-  // single polygon
-  vertices: u32,
+  pub facets: Vec<Facet>,
   camera_transform: Mat4,
   camera_axis: Vec3,
   frame: f32,
@@ -333,38 +332,60 @@ struct State {
 }
 
 impl State {
-  pub fn new(count: u32) -> Self {
+  pub fn new() -> Self {
     let mut camera_transform = mat4::create();
     mat4::identity(&mut camera_transform);
+  let a = 1.5;
+  let b = 2.0_f32.sqrt() / 2.0;
+  let c = (a + b) / 2.0;
+let mesh = [
+
+    b, 0., a,
+    0., b, a,
+    -b, 0., a,
+    0., -b, a,
+              ];
     Self {
-      vertices: count,
       camera_transform,
       camera_axis: vec3::create(),
       frame: 0.0,
       then: 0.0,
+      facets: vec![
+          Facet { 
+              normal: [0.0, 0.0, 1.0],
+              color: Color::WHITE,
+              mesh: Float32Array::from(mesh.as_slice())
+          }
+      ],
     }
   }
 
   pub fn get_vertex_count(&self) -> u32 {
-    self.vertices
+    self.facets.iter().map(|f| f.get_vertex_count()).sum()
   }
 
   pub fn get_index_count(&self) -> u32 {
-    3 * (self.vertices - 2)
+    self.facets.iter().map(|f| f.get_index_count()).sum()
   }
 
   pub fn get_vertex_indices(&self) -> Uint32Array {
+    console::log_2(&"indices".into(), &self.get_index_count().into());
     let array = Uint32Array::new_with_length((self.get_index_count()).into());
     let mut n: u32 = 0;
     let mut i: u32 = 0;
-    while i < self.vertices - 2 {
-      Uint32Array::set_index(&array, n, 0);
+    let mut total: u32 = 0;
+    for facet in self.facets.iter() {
+    let count = facet.get_vertex_count() ;
+    while i < count - 2 {
+      Uint32Array::set_index(&array, n, total);
       n += 1;
-      Uint32Array::set_index(&array, n, i + 1);
+      Uint32Array::set_index(&array, n, total + i + 1);
       n += 1;
-      Uint32Array::set_index(&array, n, i + 2);
+      Uint32Array::set_index(&array, n, total + i + 2);
       n += 1;
       i += 1;
+    }
+    total += count;
     }
     //console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
     array
@@ -372,8 +393,8 @@ impl State {
 
   pub fn get_vertex_colors(&self) -> Float32Array {
     // n vertices times 4 rgba values
-    let array = Float32Array::new_with_length(((self.vertices) * 4).into());
-    for i in 0..self.vertices {
+    let array = Float32Array::new_with_length(((self.get_vertex_count()) * 4).into());
+    for i in 0..self.get_vertex_count() {
       Color::MAGENTA.write_to(&array, (4 * i).into());
     }
 
@@ -382,10 +403,12 @@ impl State {
   }
 
   pub fn get_vertex_positions(&self) -> Float32Array {
-    let array = Float32Array::new_with_length((self.vertices * 3).into());
-    for i in 0..self.vertices {
-      let rads: f32 = 2.0 * PI * (i as f32) / (self.vertices as f32);
+    let array = Float32Array::new_with_length((self.get_vertex_count() * 3).into());
+    for facet in self.facets.iter() {
+    for i in 0..self.get_vertex_count() {
+      let rads: f32 = 2.0 * PI * (i as f32) / (self.get_vertex_count() as f32);
       Point([rads.cos(), rads.sin(), 0.0]).write_to(&array, (i * 3).into())
+    }
     }
     // console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
     array
@@ -406,21 +429,20 @@ pub struct Facet {
   pub normal: Vec3,
   pub color: Color,
 }
-/*
 impl Facet {
   pub fn get_vertex_count(&self) -> u32 {
-    self.mesh.length() / 3
+    dbg!(self.mesh.length()) / 3
   }
 
   pub fn get_index_count(&self) -> u32 {
-    3 * (self.vertices - 2)
+    dbg!(3 * (self.get_vertex_count() - 2))
   }
 
   pub fn get_vertex_indices(&self) -> Uint32Array {
     let array = Uint32Array::new_with_length((self.get_index_count()).into());
     let mut n: u32 = 0;
     let mut i: u32 = 0;
-    while i < self.vertices - 2 {
+    while i < self.get_vertex_count() - 2 {
       Uint32Array::set_index(&array, n, 0);
       n += 1;
       Uint32Array::set_index(&array, n, i + 1);
@@ -435,8 +457,8 @@ impl Facet {
 
   pub fn get_vertex_colors(&self) -> Float32Array {
     // n vertices times 4 rgba values
-    let array = Float32Array::new_with_length(((self.vertices) * 4).into());
-    for i in 0..self.vertices {
+    let array = Float32Array::new_with_length(((self.get_vertex_count()) * 4).into());
+    for i in 0..self.get_vertex_count() {
       Color::MAGENTA.write_to(&array, (4 * i).into());
     }
 
@@ -444,18 +466,11 @@ impl Facet {
     array
   }
 
-  pub fn get_vertex_positions(&self) -> Float32Array {
-    let array = Float32Array::new_with_length((self.vertices * 3).into());
-    for i in 0..self.vertices {
-      let rads: f32 = 2.0 * PI * f32::from(i) / f32::from(self.vertices);
-      Point([rads.cos(), rads.sin(), 0.0]).write_to(&array, (i * 3).into())
-    }
-    // console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
-    array
+  pub fn get_vertex_positions(&self) -> &Float32Array {
+      &self.mesh
   }
 
 }
-*/
 
 pub struct Color([f32; 4]);
 

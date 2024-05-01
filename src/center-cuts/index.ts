@@ -232,7 +232,6 @@ export function run(gl: WebGLRenderingContext): void {
     } else if (animatingAction === undefined && isActionKey(e.key)) {
       const action = actions[e.key];
       animatingAction = action;
-      sortPieces(action);
     }
   };
 
