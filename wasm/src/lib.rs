@@ -349,16 +349,22 @@ impl State {
       -b, 0., a, //
       0., -b, a, //
     ];
+    let facet = Facet {
+      normal: [0.0, 0.0, 1.0],
+      color: Color::WHITE,
+      mesh: mesh.to_vec(),
+    };
+
+    console::log_2(
+      &JsValue::from("facet vertex count"),
+      &JsValue::from(facet.get_vertex_count()),
+    );
     Self {
       camera_transform,
       camera_axis: vec3::create(),
       frame: 0.0,
       then: 0.0,
-      facets: vec![Facet {
-        normal: [0.0, 0.0, 1.0],
-        color: Color::WHITE,
-        mesh: mesh.to_vec(),
-      }],
+      facets: vec![facet],
     }
   }
 
@@ -371,7 +377,6 @@ impl State {
   }
 
   pub fn get_vertex_indices(&self) -> Uint32Array {
-    console::log_2(&"indices".into(), &self.get_index_count().into());
     let array = Uint32Array::new_with_length((self.get_index_count()).into());
     let mut n: u32 = 0;
     let mut i: u32 = 0;
@@ -389,7 +394,7 @@ impl State {
       }
       total += count;
     }
-    //console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
+    console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
     array
   }
 
@@ -400,22 +405,36 @@ impl State {
       Color::MAGENTA.write_to(&array, (4 * i).into());
     }
 
-    // console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
+    console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
     array
   }
 
   pub fn get_vertex_positions(&self) -> Float32Array {
-    let mut vector = Vec::with_capacity(self.get_vertex_count() as usize * 3);
+    let mut vector = vec![0.0; self.get_vertex_count() as usize * 3];
 
+    console::log_2(&JsValue::from("vector.len"), &JsValue::from(vector.len()));
     let mut offset = 0;
     for facet in self.facets.iter() {
       //let rads: f32 = 2.0 * PI * (i as f32) / (self.get_vertex_count() as f32);
-      vector[offset..offset + facet.mesh.len()]
-        .borrow_mut()
-        .copy_from_slice(&facet.mesh);
+      console::log_1(&JsValue::from("2"));
+      let range = offset..offset + facet.mesh.len();
+      console::log_3(
+        &JsValue::from("2.1"),
+        &JsValue::from(range.start),
+        &JsValue::from(range.end),
+      );
+
+      let borrow = vector[range].borrow_mut();
+      console::log_1(&JsValue::from("2.5"));
+      borrow.copy_from_slice(&facet.mesh);
       offset += facet.mesh.len();
+      console::log_1(&JsValue::from("3"));
     }
-    Float32Array::from(vector.as_slice())
+
+    console::log_1(&JsValue::from("4"));
+    let array = Float32Array::from(vector.as_slice());
+    console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
+    array
   }
 }
 
@@ -446,7 +465,6 @@ impl Facet {
       vec3::transform_mat4(&mut temp, &slice.try_into().unwrap(), matrix);
       slice.copy_from_slice(temp.as_slice())
     }
-    //vec3::transform_mat4(out, a, m)
   }
   pub fn get_vertex_count(&self) -> u32 {
     self.mesh.len() as u32 / 3
