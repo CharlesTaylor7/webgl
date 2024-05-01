@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 use gl_matrix::common::{Mat4, Vec3, PI};
 use gl_matrix::{mat4, vec3};
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
@@ -75,7 +76,7 @@ pub fn render(ms: f32) -> Result<()> {
     p.then = ms;
 
     if p.camera_axis.iter().any(|c| *c != 0.0) {
-        let mut transform = mat4::create();
+      let mut transform = mat4::create();
       mat4::from_rotation(&mut transform, delta * CAMERA_SPEED, &p.camera_axis);
       let mut camera = mat4::create();
       mat4::multiply(&mut camera, &transform, &p.camera_transform);
@@ -324,7 +325,7 @@ pub fn webgl_context() -> Result<WebGlRenderingContext> {
 }
 
 struct State {
-  pub facets: Vec<Facet>,
+  facets: Vec<Facet>,
   camera_transform: Mat4,
   camera_axis: Vec3,
   frame: f32,
@@ -335,28 +336,29 @@ impl State {
   pub fn new() -> Self {
     let mut camera_transform = mat4::create();
     mat4::identity(&mut camera_transform);
-  let a = 1.5;
-  let b = 2.0_f32.sqrt() / 2.0;
-  let c = (a + b) / 2.0;
-let mesh = [
-
-    b, 0., a,
-    0., b, a,
-    -b, 0., a,
-    0., -b, a,
-              ];
+    // depth of a square from the center of the puzzle
+    let a = 1.5;
+    // square sidelength
+    let b = 2.0_f32.sqrt() / 2.0;
+    let c = (a + b) / 2.0;
+    // border width
+    let w = 0.1;
+    let mesh = [
+      b, 0., a, //
+      0., b, a, //
+      -b, 0., a, //
+      0., -b, a, //
+    ];
     Self {
       camera_transform,
       camera_axis: vec3::create(),
       frame: 0.0,
       then: 0.0,
-      facets: vec![
-          Facet { 
-              normal: [0.0, 0.0, 1.0],
-              color: Color::WHITE,
-              mesh: Float32Array::from(mesh.as_slice())
-          }
-      ],
+      facets: vec![Facet {
+        normal: [0.0, 0.0, 1.0],
+        color: Color::WHITE,
+        mesh: mesh.to_vec(),
+      }],
     }
   }
 
@@ -375,17 +377,17 @@ let mesh = [
     let mut i: u32 = 0;
     let mut total: u32 = 0;
     for facet in self.facets.iter() {
-    let count = facet.get_vertex_count() ;
-    while i < count - 2 {
-      Uint32Array::set_index(&array, n, total);
-      n += 1;
-      Uint32Array::set_index(&array, n, total + i + 1);
-      n += 1;
-      Uint32Array::set_index(&array, n, total + i + 2);
-      n += 1;
-      i += 1;
-    }
-    total += count;
+      let count = facet.get_vertex_count();
+      while i < count - 2 {
+        Uint32Array::set_index(&array, n, total);
+        n += 1;
+        Uint32Array::set_index(&array, n, total + i + 1);
+        n += 1;
+        Uint32Array::set_index(&array, n, total + i + 2);
+        n += 1;
+        i += 1;
+      }
+      total += count;
     }
     //console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
     array
@@ -403,15 +405,17 @@ let mesh = [
   }
 
   pub fn get_vertex_positions(&self) -> Float32Array {
-    let array = Float32Array::new_with_length((self.get_vertex_count() * 3).into());
+    let mut vector = Vec::with_capacity(self.get_vertex_count() as usize * 3);
+
+    let mut offset = 0;
     for facet in self.facets.iter() {
-    for i in 0..self.get_vertex_count() {
-      let rads: f32 = 2.0 * PI * (i as f32) / (self.get_vertex_count() as f32);
-      Point([rads.cos(), rads.sin(), 0.0]).write_to(&array, (i * 3).into())
+      //let rads: f32 = 2.0 * PI * (i as f32) / (self.get_vertex_count() as f32);
+      vector[offset..offset + facet.mesh.len()]
+        .borrow_mut()
+        .copy_from_slice(&facet.mesh);
+      offset += facet.mesh.len();
     }
-    }
-    // console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
-    array
+    Float32Array::from(vector.as_slice())
   }
 }
 
@@ -424,18 +428,32 @@ impl Point {
   }
 }
 
+#[derive(Clone)]
 pub struct Facet {
-  pub mesh: Float32Array,
+  pub mesh: Vec<f32>,
   pub normal: Vec3,
   pub color: Color,
 }
 impl Facet {
+  pub fn transform(&mut self, matrix: &Mat4) {
+    let mut temp = [0.0_f32; 3];
+    vec3::transform_mat4(&mut temp, &self.normal, matrix);
+    self.normal = temp;
+
+    let n = self.mesh.len();
+    for i in 0..n {
+      let slice: &mut [f32] = self.mesh[3 * i..3 * i + 3].borrow_mut();
+      vec3::transform_mat4(&mut temp, &slice.try_into().unwrap(), matrix);
+      slice.copy_from_slice(temp.as_slice())
+    }
+    //vec3::transform_mat4(out, a, m)
+  }
   pub fn get_vertex_count(&self) -> u32 {
-    dbg!(self.mesh.length()) / 3
+    self.mesh.len() as u32 / 3
   }
 
   pub fn get_index_count(&self) -> u32 {
-    dbg!(3 * (self.get_vertex_count() - 2))
+    3 * (self.get_vertex_count() - 2)
   }
 
   pub fn get_vertex_indices(&self) -> Uint32Array {
@@ -465,13 +483,9 @@ impl Facet {
     // console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
     array
   }
-
-  pub fn get_vertex_positions(&self) -> &Float32Array {
-      &self.mesh
-  }
-
 }
 
+#[derive(Clone)]
 pub struct Color([f32; 4]);
 
 impl Color {
