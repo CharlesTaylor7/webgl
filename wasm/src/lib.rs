@@ -334,7 +334,7 @@ impl State {
     mat4::from_y_rotation(&mut rot_y, PI / 2.0);
     let square1 = Facet {
       normal: [0.0, 0.0, 1.0],
-      color: Color::GREEN,
+      color: Color::CYAN,
       mesh: vec![
         b, 0., a, //
         0., b, a, //
@@ -343,14 +343,14 @@ impl State {
       ],
     };
 
-    let square2 = square1.clone_with(&rot_x, Color::GREEN);
-    let square3 = square2.clone_with(&rot_x, Color::GREEN);
-    let square4 = square3.clone_with(&rot_x, Color::GREEN);
-    let square5 = square1.clone_with(&rot_y, Color::GREEN);
-    let square6 = square3.clone_with(&rot_y, Color::GREEN);
+    let square2 = square1.clone_with(&rot_x, Color::VIOLET);
+    let square3 = square2.clone_with(&rot_x, Color::LIGHT_RED);
+    let square4 = square3.clone_with(&rot_x, Color::BLUE_VIOLET);
+    let square5 = square1.clone_with(&rot_y, Color::SKY_BLUE);
+    let square6 = square3.clone_with(&rot_y, Color::ORANGE);
 
     let triangle1 = Facet {
-      color: Color::MAGENTA,
+      color: Color::WHITE,
       normal: [1., 1., 1.],
       mesh: vec![
         c, 0., c, //
@@ -360,15 +360,15 @@ impl State {
     };
 
     let triangle2 = triangle1.clone_with(&rot_x, Color::MAGENTA);
-    let triangle3 = triangle2.clone_with(&rot_x, Color::MAGENTA);
-    let triangle4 = triangle3.clone_with(&rot_x, Color::MAGENTA);
-    let triangle5 = triangle3.clone_with(&rot_y, Color::MAGENTA);
-    let triangle6 = triangle4.clone_with(&rot_y, Color::MAGENTA);
-    let triangle7 = triangle5.clone_with(&rot_y, Color::MAGENTA);
-    let triangle8 = triangle6.clone_with(&rot_y, Color::MAGENTA);
+    let triangle3 = triangle2.clone_with(&rot_x, Color::ORANGE);
+    let triangle4 = triangle3.clone_with(&rot_x, Color::GREEN);
+    let triangle5 = triangle3.clone_with(&rot_y, Color::YELLOW);
+    let triangle6 = triangle4.clone_with(&rot_y, Color::SILVER);
+    let triangle7 = triangle5.clone_with(&rot_y, Color::BLUE);
+    let triangle8 = triangle6.clone_with(&rot_y, Color::CORAL);
 
     let trapezoid1a = Facet {
-      color: Color::LIGHT_PURPLE,
+      color: Color::WHITE,
       normal: [1., 1., 1.],
       mesh: vec![
         c, 0., c, //
@@ -380,36 +380,36 @@ impl State {
 
     let mut rot_oct1 = mat4::create();
     mat4::from_rotation(&mut rot_oct1, 2.0 * PI / 3.0, &[1., 1., 1.]);
-    let trapezoid1b = trapezoid1a.clone_with(&rot_oct1, Color::LIGHT_PURPLE);
-    let trapezoid1c = trapezoid1b.clone_with(&rot_oct1, Color::LIGHT_PURPLE);
+    let trapezoid1b = trapezoid1a.clone_with(&rot_oct1, Color::WHITE);
+    let trapezoid1c = trapezoid1b.clone_with(&rot_oct1, Color::WHITE);
 
-    let trapezoid2a = trapezoid1a.clone_with(&rot_x, Color::LIGHT_PURPLE);
-    let trapezoid2b = trapezoid1b.clone_with(&rot_x, Color::LIGHT_PURPLE);
-    let trapezoid2c = trapezoid1c.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid2a = trapezoid1a.clone_with(&rot_x, Color::MAGENTA);
+    let trapezoid2b = trapezoid1b.clone_with(&rot_x, Color::MAGENTA);
+    let trapezoid2c = trapezoid1c.clone_with(&rot_x, Color::MAGENTA);
 
-    let trapezoid3a = trapezoid2a.clone_with(&rot_x, Color::LIGHT_PURPLE);
-    let trapezoid3b = trapezoid2b.clone_with(&rot_x, Color::LIGHT_PURPLE);
-    let trapezoid3c = trapezoid2c.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid3a = trapezoid2a.clone_with(&rot_x, Color::ORANGE);
+    let trapezoid3b = trapezoid2b.clone_with(&rot_x, Color::ORANGE);
+    let trapezoid3c = trapezoid2c.clone_with(&rot_x, Color::ORANGE);
 
-    let trapezoid4a = trapezoid3a.clone_with(&rot_x, Color::LIGHT_PURPLE);
-    let trapezoid4b = trapezoid3b.clone_with(&rot_x, Color::LIGHT_PURPLE);
-    let trapezoid4c = trapezoid3c.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid4a = trapezoid3a.clone_with(&rot_x, Color::GREEN);
+    let trapezoid4b = trapezoid3b.clone_with(&rot_x, Color::GREEN);
+    let trapezoid4c = trapezoid3c.clone_with(&rot_x, Color::GREEN);
 
-    let trapezoid5a = trapezoid3a.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid5b = trapezoid3b.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid5c = trapezoid3c.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid5a = trapezoid3a.clone_with(&rot_y, Color::YELLOW);
+    let trapezoid5b = trapezoid3b.clone_with(&rot_y, Color::YELLOW);
+    let trapezoid5c = trapezoid3c.clone_with(&rot_y, Color::YELLOW);
 
-    let trapezoid6a = trapezoid4a.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid6b = trapezoid4b.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid6c = trapezoid4c.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid6a = trapezoid4a.clone_with(&rot_y, Color::SILVER);
+    let trapezoid6b = trapezoid4b.clone_with(&rot_y, Color::SILVER);
+    let trapezoid6c = trapezoid4c.clone_with(&rot_y, Color::SILVER);
 
-    let trapezoid7a = trapezoid5a.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid7b = trapezoid5b.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid7c = trapezoid5c.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid7a = trapezoid5a.clone_with(&rot_y, Color::BLUE);
+    let trapezoid7b = trapezoid5b.clone_with(&rot_y, Color::BLUE);
+    let trapezoid7c = trapezoid5c.clone_with(&rot_y, Color::BLUE);
 
-    let trapezoid8a = trapezoid6a.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid8b = trapezoid6b.clone_with(&rot_y, Color::LIGHT_RED);
-    let trapezoid8c = trapezoid6c.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid8a = trapezoid6a.clone_with(&rot_y, Color::CORAL);
+    let trapezoid8b = trapezoid6b.clone_with(&rot_y, Color::CORAL);
+    let trapezoid8c = trapezoid6c.clone_with(&rot_y, Color::CORAL);
 
     facets.push(square1);
     facets.push(square2);
@@ -425,6 +425,7 @@ impl State {
     facets.push(triangle6);
     facets.push(triangle7);
     facets.push(triangle8);
+
     facets.push(trapezoid1a);
     facets.push(trapezoid1b);
     facets.push(trapezoid1c);
