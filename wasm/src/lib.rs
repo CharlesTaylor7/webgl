@@ -123,10 +123,10 @@ pub fn render(ms: f32) -> Result<()> {
       });
     }
 
+    set_vertex_positions(&gl, &p.get_vertex_positions());
     /*
     set_vertex_colors(&gl, &p.get_vertex_colors());
     set_vertex_indices(&gl, &p.get_vertex_indices());
-    set_vertex_positions(&gl, &p.get_vertex_positions());
     */
     clear_scene(&gl);
     resize_to_screen(&gl);
@@ -174,6 +174,8 @@ pub fn on_key_down(event: &KeyboardEvent) {
           }
         }
       }
+
+      //console_log(state);
     })
   })
 }
@@ -323,6 +325,7 @@ fn webgl_context() -> Result<WebGlRenderingContext> {
   Ok(gl)
 }
 
+#[derive(Clone, Copy, Debug)]
 struct Twist {
   octant: u8,
 }
@@ -351,6 +354,7 @@ impl Twist {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 struct State {
   facets: Vec<Facet>,
   camera_transform: Mat4,
@@ -558,11 +562,39 @@ impl State {
 
   fn get_vertex_positions(&self) -> Float32Array {
     let mut vector = vec![0.0; self.get_vertex_count() as usize * 3];
-
+    console_log("here 1");
     let mut offset = 0;
-    for facet in self.facets.iter() {
-      vector[offset..(offset + facet.mesh.len())].copy_from_slice(&facet.mesh);
-      offset += facet.mesh.len();
+    console_log("here 2");
+
+    // slow path
+    STATE.with_borrow(|state| console_log(state.active_twist.as_slice()));
+    if let Some(twist) = STATE.with_borrow(|state| state.active_twist) {
+      console_log("here 3");
+      let normal = twist.to_normal();
+      //  vec3::dot(normal, )
+
+      for facet in self.facets.iter() {
+        let data: &mut [f32] = vector[offset..(offset + facet.mesh.len())].borrow_mut();
+        data.copy_from_slice(&facet.mesh);
+
+        if vec3::dot(&normal, &facet.normal) > 0. {
+          console_log(true);
+          let mut mesh = Mesh { data };
+          mesh.transform(&twist.to_matrix(PI / 6.));
+        } else {
+          console_log(false);
+        }
+        offset += facet.mesh.len();
+      }
+    }
+    // fast path
+    else {
+      console_log("here 4");
+      for facet in self.facets.iter() {
+        vector[offset..(offset + facet.mesh.len())].copy_from_slice(&facet.mesh);
+        console_log("here 5");
+        offset += facet.mesh.len();
+      }
     }
 
     let array = Float32Array::from(vector.as_slice());
@@ -571,7 +603,7 @@ impl State {
   }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct Facet {
   mesh: Vec<f32>,
   normal: Vec3,
@@ -608,7 +640,7 @@ impl Facet {
   }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct Color([f32; 4]);
 
 #[allow(dead_code)]
@@ -757,6 +789,28 @@ fn resize_to_screen(gl: &WebGlRenderingContext) {
   canvas.set_width(canvas.client_width() as u32);
   gl.viewport(0, 0, canvas.client_width(), canvas.client_height());
 }
+
+struct Mesh<'a> {
+  data: &'a mut [f32],
+}
+
+impl<'a> Mesh<'a> {
+  fn transform(&mut self, matrix: &Mat4) {
+    let mut temp = [0.0_f32; 3];
+
+    for i in 0..self.data.len() / 3 {
+      // safe because the types guarantee the array size is a multiple of 3;
+      let slice: &mut [f32] = self.data[3 * i..3 * (i + 1)].borrow_mut();
+      vec3::transform_mat4(&mut temp, &slice.try_into().unwrap(), matrix);
+      slice.copy_from_slice(temp.as_slice());
+    }
+  }
+}
+
+fn console_log<T: std::fmt::Debug>(obj: T) {
+  console::log_1(&JsValue::from(format!("{:#?}", obj)));
+}
+
 /*
 struct Mesh<const N: usize>
 where
