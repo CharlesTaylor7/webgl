@@ -206,11 +206,11 @@ fn start() -> Result<()> {
   PROJECTION.with(|projection| {
     set_transform_matrix(&gl, &projection);
   });
-STATE.with_borrow(|p| {
+  STATE.with_borrow(|p| {
     set_vertex_colors(&gl, &p.get_vertex_colors());
     set_vertex_indices(&gl, &p.get_vertex_indices());
     set_vertex_positions(&gl, &p.get_vertex_positions());
-});
+  });
   Ok(())
 }
 
@@ -323,45 +323,93 @@ impl State {
     let a = 1.5;
     // square sidelength
     let b = 2.0_f32.sqrt() / 2.0;
-    let _c = (a + b) / 2.0;
+    let c = (a + b) / 2.0;
     // border width
-    let _w = 0.1;
-    let mesh = [
-      b, 0., a, //
-      0., b, a, //
-      -b, 0., a, //
-      0., -b, a, //
-    ];
-    let square1 = Facet {
-      normal: [0.0, 0.0, 1.0],
-      color: Color::YELLOW,
-      mesh: mesh.to_vec(),
-    };
+    let w = 0.1;
+
     let mut rot_x = mat4::create();
     mat4::from_x_rotation(&mut rot_x, PI / 2.0);
 
     let mut rot_y = mat4::create();
     mat4::from_y_rotation(&mut rot_y, PI / 2.0);
+    let square1 = Facet {
+      normal: [0.0, 0.0, 1.0],
+      color: Color::GREEN,
+      mesh: vec![
+        b, 0., a, //
+        0., b, a, //
+        -b, 0., a, //
+        0., -b, a, //
+      ],
+    };
 
-    let mut square2 = square1.clone();
-    square2.transform(&rot_x);
-    square2.color = Color::WHITE;
+    let square2 = square1.clone_with(&rot_x, Color::GREEN);
+    let square3 = square2.clone_with(&rot_x, Color::GREEN);
+    let square4 = square3.clone_with(&rot_x, Color::GREEN);
+    let square5 = square1.clone_with(&rot_y, Color::GREEN);
+    let square6 = square3.clone_with(&rot_y, Color::GREEN);
 
-    let mut square3 = square2.clone();
-    square3.transform(&rot_x);
-    square3.color = Color::MAGENTA;
+    let triangle1 = Facet {
+      color: Color::MAGENTA,
+      normal: [1., 1., 1.],
+      mesh: vec![
+        c, 0., c, //
+        0., c, c, //
+        c, c, 0., //
+      ],
+    };
 
-    let mut square4 = square3.clone();
-    square4.transform(&rot_x);
-    square4.color = Color::LIGHT_PINK;
+    let triangle2 = triangle1.clone_with(&rot_x, Color::MAGENTA);
+    let triangle3 = triangle2.clone_with(&rot_x, Color::MAGENTA);
+    let triangle4 = triangle3.clone_with(&rot_x, Color::MAGENTA);
+    let triangle5 = triangle3.clone_with(&rot_y, Color::MAGENTA);
+    let triangle6 = triangle4.clone_with(&rot_y, Color::MAGENTA);
+    let triangle7 = triangle5.clone_with(&rot_y, Color::MAGENTA);
+    let triangle8 = triangle6.clone_with(&rot_y, Color::MAGENTA);
 
-    let mut square5 = square1.clone();
-    square5.transform(&rot_y);
-    square5.color = Color::LIGHT_RED;
+    let trapezoid1a = Facet {
+      color: Color::LIGHT_PURPLE,
+      normal: [1., 1., 1.],
+      mesh: vec![
+        c, 0., c, //
+        0., c, c, //
+        0., b, a, //
+        b, 0., a, //
+      ],
+    };
 
-    let mut square6 = square3.clone();
-    square6.transform(&rot_y);
-    square6.color = Color::GREEN;
+    let mut rot_oct1 = mat4::create();
+    mat4::from_rotation(&mut rot_oct1, 2.0 * PI / 3.0, &[1., 1., 1.]);
+    let trapezoid1b = trapezoid1a.clone_with(&rot_oct1, Color::LIGHT_PURPLE);
+    let trapezoid1c = trapezoid1b.clone_with(&rot_oct1, Color::LIGHT_PURPLE);
+
+    let trapezoid2a = trapezoid1a.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid2b = trapezoid1b.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid2c = trapezoid1c.clone_with(&rot_x, Color::LIGHT_PURPLE);
+
+    let trapezoid3a = trapezoid2a.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid3b = trapezoid2b.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid3c = trapezoid2c.clone_with(&rot_x, Color::LIGHT_PURPLE);
+
+    let trapezoid4a = trapezoid3a.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid4b = trapezoid3b.clone_with(&rot_x, Color::LIGHT_PURPLE);
+    let trapezoid4c = trapezoid3c.clone_with(&rot_x, Color::LIGHT_PURPLE);
+
+    let trapezoid5a = trapezoid3a.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid5b = trapezoid3b.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid5c = trapezoid3c.clone_with(&rot_y, Color::LIGHT_RED);
+
+    let trapezoid6a = trapezoid4a.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid6b = trapezoid4b.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid6c = trapezoid4c.clone_with(&rot_y, Color::LIGHT_RED);
+
+    let trapezoid7a = trapezoid5a.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid7b = trapezoid5b.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid7c = trapezoid5c.clone_with(&rot_y, Color::LIGHT_RED);
+
+    let trapezoid8a = trapezoid6a.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid8b = trapezoid6b.clone_with(&rot_y, Color::LIGHT_RED);
+    let trapezoid8c = trapezoid6c.clone_with(&rot_y, Color::LIGHT_RED);
 
     facets.push(square1);
     facets.push(square2);
@@ -369,6 +417,38 @@ impl State {
     facets.push(square4);
     facets.push(square5);
     facets.push(square6);
+    facets.push(triangle1);
+    facets.push(triangle2);
+    facets.push(triangle3);
+    facets.push(triangle4);
+    facets.push(triangle5);
+    facets.push(triangle6);
+    facets.push(triangle7);
+    facets.push(triangle8);
+    facets.push(trapezoid1a);
+    facets.push(trapezoid1b);
+    facets.push(trapezoid1c);
+    facets.push(trapezoid2a);
+    facets.push(trapezoid2b);
+    facets.push(trapezoid2c);
+    facets.push(trapezoid3a);
+    facets.push(trapezoid3b);
+    facets.push(trapezoid3c);
+    facets.push(trapezoid4a);
+    facets.push(trapezoid4b);
+    facets.push(trapezoid4c);
+    facets.push(trapezoid5a);
+    facets.push(trapezoid5b);
+    facets.push(trapezoid5c);
+    facets.push(trapezoid6a);
+    facets.push(trapezoid6b);
+    facets.push(trapezoid6c);
+    facets.push(trapezoid7a);
+    facets.push(trapezoid7b);
+    facets.push(trapezoid7c);
+    facets.push(trapezoid8a);
+    facets.push(trapezoid8b);
+    facets.push(trapezoid8c);
     facets
   }
 
@@ -392,13 +472,7 @@ impl State {
       }
       total += count;
     }
-    console::log_3(
-      &JsValue::from("array"),
-      &JsValue::from(array.capacity()),
-      &JsValue::from(array.len()),
-    );
     let array = Uint32Array::from(array.as_slice());
-    console::log_2(&JsValue::from("array"), &JsValue::from(&array));
     array
   }
 
@@ -440,17 +514,6 @@ impl State {
   }
 }
 
-/*
-struct Point([f32; 3]);
-impl Point {
-  fn write_to(&self, array: &Float32Array, start: u32) {
-    Float32Array::set_index(array, start, self.0[0]);
-    Float32Array::set_index(array, start + 1, self.0[1]);
-    Float32Array::set_index(array, start + 2, self.0[2]);
-  }
-}
-*/
-
 #[derive(Clone)]
 struct Facet {
   mesh: Vec<f32>,
@@ -459,6 +522,12 @@ struct Facet {
 }
 
 impl Facet {
+  fn clone_with(&self, matrix: &Mat4, color: Color) -> Facet {
+    let mut facet = self.clone();
+    facet.transform(matrix);
+    facet.color = color;
+    facet
+  }
   fn transform(&mut self, matrix: &Mat4) {
     let mut temp = [0.0_f32; 3];
     vec3::transform_mat4(&mut temp, &self.normal, matrix);
