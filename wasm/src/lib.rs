@@ -1,4 +1,9 @@
-#![feature(const_fn_floating_point_arithmetic, const_refs_to_static)]
+#![feature(
+  const_fn_floating_point_arithmetic,
+  const_refs_to_static,
+  generic_const_exprs
+)]
+#![allow(incomplete_features)]
 use gl_matrix::common::{Mat4, Vec3, PI};
 use gl_matrix::{mat4, vec3};
 use std::borrow::BorrowMut;
@@ -23,12 +28,20 @@ fn init_state() -> RefCell<State> {
 
 fn init_keymap() -> Keymap {
   HashMap::from([
-    ("w", CameraMotion::new(Orientation::Negative, Axis::X)),
-    ("a", CameraMotion::new(Orientation::Negative, Axis::Y)),
-    ("s", CameraMotion::new(Orientation::Positive, Axis::X)),
-    ("d", CameraMotion::new(Orientation::Positive, Axis::Y)),
-    ("q", CameraMotion::new(Orientation::Positive, Axis::Z)),
-    ("e", CameraMotion::new(Orientation::Negative, Axis::Z)),
+    ("w", Command::camera(Orientation::Negative, Axis::X)),
+    ("a", Command::camera(Orientation::Negative, Axis::Y)),
+    ("s", Command::camera(Orientation::Positive, Axis::X)),
+    ("d", Command::camera(Orientation::Positive, Axis::Y)),
+    ("q", Command::camera(Orientation::Positive, Axis::Z)),
+    ("e", Command::camera(Orientation::Negative, Axis::Z)),
+    ("h", Command::twist(true, true, true)),
+    ("j", Command::twist(true, false, true)),
+    ("k", Command::twist(false, false, true)),
+    ("l", Command::twist(false, true, true)),
+    ("y", Command::twist(true, true, false)),
+    ("u", Command::twist(true, false, false)),
+    ("i", Command::twist(false, false, false)),
+    ("o", Command::twist(false, true, false)),
   ])
 }
 
@@ -41,7 +54,7 @@ fn init_projection() -> Mat4 {
 
 type Result<T, E = JsValue> = std::result::Result<T, E>;
 
-type Keymap = HashMap<&'static str, CameraMotion>;
+type Keymap = HashMap<&'static str, Command>;
 enum Axis {
   X,
   Y,
@@ -51,13 +64,36 @@ enum Orientation {
   Positive,
   Negative,
 }
-struct CameraMotion {
-  axis: Axis,
-  orientation: Orientation,
+enum Command {
+  Camera {
+    axis: Axis,
+    orientation: Orientation,
+  },
+  Twist {
+    // bit pattern.
+    // first bit is the x axis,
+    // second bit is the y axis,
+    // third bit is the z axis
+    octant: u8,
+  },
 }
-impl CameraMotion {
-  fn new(orientation: Orientation, axis: Axis) -> Self {
-    Self { orientation, axis }
+impl Command {
+  fn camera(orientation: Orientation, axis: Axis) -> Self {
+    Self::Camera { orientation, axis }
+  }
+
+  fn twist(x: bool, y: bool, z: bool) -> Self {
+    let mut octant = 0;
+    if x {
+      octant |= 1
+    }
+    if y {
+      octant |= 2
+    }
+    if z {
+      octant |= 4
+    }
+    Self::Twist { octant }
   }
 }
 
@@ -112,28 +148,32 @@ pub fn on_key_down(event: &KeyboardEvent) {
     STATE.with_borrow_mut(|state| {
       let key: String = event.key();
       let b: &str = &key;
-      if let Some(CameraMotion { axis, orientation }) = keymap.get(b) {
-        let val = match orientation {
-          Orientation::Positive => 1.0,
-          Orientation::Negative => -1.0,
-        };
-        match axis {
-          Axis::X => {
-            state.camera_axis[0] = val;
+      if let Some(command) = keymap.get(b) {
+        match command {
+          Command::Camera { axis, orientation } => {
+            let val = match orientation {
+              Orientation::Positive => 1.0,
+              Orientation::Negative => -1.0,
+            };
+            match axis {
+              Axis::X => {
+                state.camera_axis[0] = val;
+              }
+              Axis::Y => {
+                state.camera_axis[1] = val;
+              }
+              Axis::Z => {
+                state.camera_axis[2] = val;
+              }
+            }
           }
-          Axis::Y => {
-            state.camera_axis[1] = val;
-          }
-          Axis::Z => {
-            state.camera_axis[2] = val;
+          Command::Twist { octant } => {
+            if state.active_twist.is_none() {
+              state.active_twist = Some(Twist { octant: *octant });
+            }
           }
         }
       }
-
-      console::log_2(
-        &JsValue::from("camera_axis"),
-        &JsValue::from(&Float32Array::from(state.camera_axis.as_slice())),
-      );
     })
   })
 }
@@ -145,7 +185,7 @@ pub fn on_key_up(event: &KeyboardEvent) {
     STATE.with_borrow_mut(|state| {
       let key: String = event.key();
       let b: &str = &key;
-      if let Some(CameraMotion { axis, .. }) = keymap.get(b) {
+      if let Some(Command::Camera { axis, .. }) = keymap.get(b) {
         match axis {
           Axis::X => {
             state.camera_axis[0] = 0.0;
@@ -158,13 +198,6 @@ pub fn on_key_up(event: &KeyboardEvent) {
           }
         }
       }
-
-      console::log_4(
-        &JsValue::from("camera_axis"),
-        &JsValue::from(state.camera_axis[0]),
-        &JsValue::from(state.camera_axis[1]),
-        &JsValue::from(state.camera_axis[2]),
-      );
     })
   });
 }
@@ -290,6 +323,33 @@ fn webgl_context() -> Result<WebGlRenderingContext> {
   Ok(gl)
 }
 
+struct Twist {
+  octant: u8,
+}
+impl Twist {
+  fn to_normal(&self) -> Vec3 {
+    let mut axis = [-1., -1., -1.];
+    if self.octant & 1 != 0 {
+      axis[0] = 1.;
+    }
+
+    if self.octant & 2 != 0 {
+      axis[1] = 1.;
+    }
+
+    if self.octant & 4 != 0 {
+      axis[2] = 1.;
+    }
+    axis
+  }
+
+  fn to_matrix(&self, angle: f32) -> Mat4 {
+    let mut matrix = mat4::create();
+    mat4::from_rotation(&mut matrix, angle, &self.to_normal());
+    matrix
+  }
+}
+
 #[allow(dead_code)]
 struct State {
   facets: Vec<Facet>,
@@ -297,6 +357,7 @@ struct State {
   camera_axis: Vec3,
   frame: f32,
   then: f32,
+  active_twist: Option<Twist>,
 }
 
 impl State {
@@ -309,6 +370,7 @@ impl State {
       frame: 0.0,
       then: 0.0,
       facets: Self::init_facets(),
+      active_twist: None,
     }
   }
 
@@ -499,12 +561,6 @@ impl State {
 
     let mut offset = 0;
     for facet in self.facets.iter() {
-      console::log_4(
-        &JsValue::from("color"),
-        &JsValue::from(&Float32Array::from(facet.color.0.as_slice())),
-        &JsValue::from("mesh"),
-        &JsValue::from(&Float32Array::from(facet.mesh.as_slice())),
-      );
       vector[offset..(offset + facet.mesh.len())].copy_from_slice(&facet.mesh);
       offset += facet.mesh.len();
     }
@@ -701,3 +757,27 @@ fn resize_to_screen(gl: &WebGlRenderingContext) {
   canvas.set_width(canvas.client_width() as u32);
   gl.viewport(0, 0, canvas.client_width(), canvas.client_height());
 }
+/*
+struct Mesh<const N: usize>
+where
+  [f32; 3 * N]: Sized,
+{
+  data: [f32; 3 * N],
+}
+
+impl<const N: usize> Mesh<N>
+where
+  [f32; 3 * N]: Sized,
+{
+  fn transform(&mut self, matrix: &Mat4) {
+    let mut temp = [0.0_f32; 3];
+
+    for i in 0..N {
+      // safe because the types guarantee the array size is a multiple of 3;
+      let slice: &mut [f32] = self.data[3 * i..3 * (i + 1)].borrow_mut();
+      vec3::transform_mat4(&mut temp, &slice.try_into().unwrap(), matrix);
+      slice.copy_from_slice(temp.as_slice());
+    }
+  }
+}
+*/
