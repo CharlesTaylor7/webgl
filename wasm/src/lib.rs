@@ -87,14 +87,17 @@ pub fn render(ms: f32) -> Result<()> {
       });
     }
 
+    /*
     set_vertex_colors(&gl, &p.get_vertex_colors());
     set_vertex_indices(&gl, &p.get_vertex_indices());
     set_vertex_positions(&gl, &p.get_vertex_positions());
+    */
     clear_scene(&gl);
     resize_to_screen(&gl);
+    let n = p.get_index_count() as i32;
     gl.draw_elements_with_i32(
       WebGlRenderingContext::TRIANGLES,
-      p.get_index_count() as i32,
+      n,
       WebGlRenderingContext::UNSIGNED_INT,
       0,
     );
@@ -127,11 +130,9 @@ pub fn on_key_down(event: &KeyboardEvent) {
         }
       }
 
-      console::log_4(
+      console::log_2(
         &JsValue::from("camera_axis"),
-        &JsValue::from(state.camera_axis[0]),
-        &JsValue::from(state.camera_axis[1]),
-        &JsValue::from(state.camera_axis[2]),
+        &JsValue::from(&Float32Array::from(state.camera_axis.as_slice())),
       );
     })
   })
@@ -167,44 +168,6 @@ pub fn on_key_up(event: &KeyboardEvent) {
     })
   });
 }
-
-/*
-  document.onkeydown = (e) => {
-    if (isCameraKey(e.key)) {
-      const motion = cameraMotions[e.key];
-      if (motion === "+x") {
-        activeCameraAxis[0] = 1;
-      } else if (motion === "-x") {
-        activeCameraAxis[0] = -1;
-      } else if (motion === "+y") {
-        activeCameraAxis[1] = 1;
-      } else if (motion === "-y") {
-        activeCameraAxis[1] = -1;
-      } else if (motion === "+z") {
-        activeCameraAxis[2] = 1;
-      } else if (motion === "-z") {
-        activeCameraAxis[2] = -1;
-      }
-    } else if (animatingAction === undefined && isActionKey(e.key)) {
-      const action = actions[e.key];
-      animatingAction = action;
-      sortPieces(action);
-    }
-  };
-
-  document.onkeyup = (e) => {
-    if (isCameraKey(e.key)) {
-      const motion = cameraMotions[e.key];
-      if (motion.endsWith("x")) {
-        activeCameraAxis[0] = 0;
-      } else if (motion.endsWith("y")) {
-        activeCameraAxis[1] = 0;
-      } else if (motion.endsWith("z")) {
-        activeCameraAxis[2] = 0;
-      }
-    }
-  };
-*/
 
 const VERTEX_SHADER: &str = r##"
   attribute vec4 vertexPosition;
@@ -243,7 +206,11 @@ fn start() -> Result<()> {
   PROJECTION.with(|projection| {
     set_transform_matrix(&gl, &projection);
   });
-  //clear_scene(&gl);
+STATE.with_borrow(|p| {
+    set_vertex_colors(&gl, &p.get_vertex_colors());
+    set_vertex_indices(&gl, &p.get_vertex_indices());
+    set_vertex_positions(&gl, &p.get_vertex_positions());
+});
   Ok(())
 }
 
@@ -367,18 +334,41 @@ impl State {
     ];
     let square1 = Facet {
       normal: [0.0, 0.0, 1.0],
-      color: Color::WHITE,
+      color: Color::YELLOW,
       mesh: mesh.to_vec(),
     };
-    let mut rot = mat4::create();
-    mat4::from_x_rotation(&mut rot, PI / 2.0);
-    console::log_1(&JsValue::from("from_x_rotation"));
+    let mut rot_x = mat4::create();
+    mat4::from_x_rotation(&mut rot_x, PI / 2.0);
+
+    let mut rot_y = mat4::create();
+    mat4::from_y_rotation(&mut rot_y, PI / 2.0);
+
     let mut square2 = square1.clone();
-    square2.transform(&rot);
-    console::log_1(&JsValue::from("transform"));
+    square2.transform(&rot_x);
+    square2.color = Color::WHITE;
+
+    let mut square3 = square2.clone();
+    square3.transform(&rot_x);
+    square3.color = Color::MAGENTA;
+
+    let mut square4 = square3.clone();
+    square4.transform(&rot_x);
+    square4.color = Color::LIGHT_PINK;
+
+    let mut square5 = square1.clone();
+    square5.transform(&rot_y);
+    square5.color = Color::LIGHT_RED;
+
+    let mut square6 = square3.clone();
+    square6.transform(&rot_y);
+    square6.color = Color::GREEN;
 
     facets.push(square1);
     facets.push(square2);
+    facets.push(square3);
+    facets.push(square4);
+    facets.push(square5);
+    facets.push(square6);
     facets
   }
 
@@ -391,38 +381,40 @@ impl State {
   }
 
   fn get_vertex_indices(&self) -> Uint32Array {
-    let array = Uint32Array::new_with_length((self.get_index_count()).into());
-    let mut n: u32 = 0;
-    let mut i: u32 = 0;
+    let mut array = Vec::with_capacity(self.get_index_count() as usize);
     let mut total: u32 = 0;
     for facet in self.facets.iter() {
       let count = facet.get_vertex_count();
-      while i < count - 2 {
-        Uint32Array::set_index(&array, n, total);
-        n += 1;
-        Uint32Array::set_index(&array, n, total + i + 1);
-        n += 1;
-        Uint32Array::set_index(&array, n, total + i + 2);
-        n += 1;
-        i += 1;
+      for i in 0..(count - 2) {
+        array.push(total);
+        array.push(total + i + 1);
+        array.push(total + i + 2);
       }
       total += count;
     }
-    console::log_2(&JsValue::from("indices"), &JsValue::from(&array));
+    console::log_3(
+      &JsValue::from("array"),
+      &JsValue::from(array.capacity()),
+      &JsValue::from(array.len()),
+    );
+    let array = Uint32Array::from(array.as_slice());
+    console::log_2(&JsValue::from("array"), &JsValue::from(&array));
     array
   }
 
   fn get_vertex_colors(&self) -> Float32Array {
     // n vertices times 4 rgba values
-    let array = Float32Array::new_with_length(((self.get_vertex_count()) * 4).into());
-    let mut i = 0;
+    let mut array = Vec::with_capacity(4 * self.get_vertex_count() as usize);
     for facet in self.facets.iter() {
-      for _ in 0..self.get_vertex_count() {
-        facet.color.write_to(&array, 4 * i);
-        i += 1;
+      for _ in 0..facet.get_vertex_count() {
+        array.push(facet.color.0[0]);
+        array.push(facet.color.0[1]);
+        array.push(facet.color.0[2]);
+        array.push(facet.color.0[3]);
       }
     }
 
+    let array = Float32Array::from(array.as_slice());
     console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
     array
   }
@@ -430,26 +422,18 @@ impl State {
   fn get_vertex_positions(&self) -> Float32Array {
     let mut vector = vec![0.0; self.get_vertex_count() as usize * 3];
 
-    console::log_2(&JsValue::from("vector.len"), &JsValue::from(vector.len()));
     let mut offset = 0;
     for facet in self.facets.iter() {
-      //let rads: f32 = 2.0 * PI * (i as f32) / (self.get_vertex_count() as f32);
-      console::log_1(&JsValue::from("2"));
-      let range = offset..offset + facet.mesh.len();
-      console::log_3(
-        &JsValue::from("2.1"),
-        &JsValue::from(range.start),
-        &JsValue::from(range.end),
+      console::log_4(
+        &JsValue::from("color"),
+        &JsValue::from(&Float32Array::from(facet.color.0.as_slice())),
+        &JsValue::from("mesh"),
+        &JsValue::from(&Float32Array::from(facet.mesh.as_slice())),
       );
-
-      let borrow = vector[range].borrow_mut();
-      console::log_1(&JsValue::from("2.5"));
-      borrow.copy_from_slice(&facet.mesh);
+      vector[offset..(offset + facet.mesh.len())].copy_from_slice(&facet.mesh);
       offset += facet.mesh.len();
-      console::log_1(&JsValue::from("3"));
     }
 
-    console::log_1(&JsValue::from("4"));
     let array = Float32Array::from(vector.as_slice());
     console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
     array
@@ -473,6 +457,7 @@ struct Facet {
   normal: Vec3,
   color: Color,
 }
+
 impl Facet {
   fn transform(&mut self, matrix: &Mat4) {
     let mut temp = [0.0_f32; 3];
