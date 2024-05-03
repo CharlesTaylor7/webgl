@@ -377,6 +377,16 @@ impl From<Facet> for Piece {
     }
   }
 }
+impl Piece {
+  fn transform(&mut self, matrix: &Mat4) {
+    let mut temp = [0.; 3];
+    vec3::transform_mat4(&mut temp, &self.normal, matrix);
+    self.normal = temp;
+    for facet in self.facets.iter_mut() {
+      facet.transform(matrix);
+    }
+  }
+}
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -410,10 +420,8 @@ impl State {
       let normal = twist.to_normal();
       let twist = twist.to_matrix(2. * PI / 3.);
       for piece in self.pieces.iter_mut() {
-        for facet in piece.facets.iter_mut() {
-          if vec3::dot(&normal, &piece.normal) > 0. {
-            facet.transform(&twist);
-          }
+        if vec3::dot(&normal, &piece.normal) > 0. {
+          piece.transform(&twist)
         }
       }
     }
