@@ -24,11 +24,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
+          components: wasm-pack
           targets: wasm32-unknown-unknown
 
       - name: Build
         run: |
-          cargo build
+          wasm-pack build --debug --target web
           npm i 
           npx vite build
   
