@@ -1,3 +1,5 @@
+use crate::permutation::{PermArray, PermHashMap};
+
 enum Hex {
   White,
   Pink,
@@ -20,15 +22,57 @@ enum Square {
 
 struct TriangleFacet(Hex);
 struct EdgeFacet(Square, Hex);
+struct SquareFacet(Square);
 
-struct PerspectiveShift {
-  hexes: Vec<Hex>,
-  squares: Vec<Square>,
+// all possible facets for center cuts only puzzle.
+enum Facet {
+  Square(SquareFacet),
+  Triangle(TriangleFacet),
+  Edge(EdgeFacet),
 }
 
-struct Rotation {
-  hexes: Vec<Hex>,
-  squares: Vec<Square>,
+//fn puzzle()
+struct Puzzle {
+  edges: Vec<EdgeFacet>,
+  squares: Vec<SquareFacet>,
+  triangles: Vec<TriangleFacet>,
+  edge_permutation: PermArray<24>,
+  square_permutation: PermArray<6>,
+  triangle_permutation: PermArray<8>,
+}
+
+impl Puzzle {
+  fn new() -> Self {
+    Self {
+      edges: vec![],
+      squares: vec![],
+      triangles: vec![],
+      edge_permutation: PermArray::identity(),
+      square_permutation: PermArray::identity(),
+      triangle_permutation: PermArray::identity(),
+    }
+  }
+}
+
+/*
+fn facets() -> Vec<Facet> {
+  triangle_facets()
+    .map(|t| Facet::Triangle(facet))
+    .concat(square_facets())
+    .concat(edge_facets())
+}
+*/
+
+fn square_facets() -> Vec<SquareFacet> {
+  vec![
+    SquareFacet(Square::White),
+    SquareFacet(Square::Yellow),
+    SquareFacet(Square::Blue),
+    SquareFacet(Square::Green),
+    SquareFacet(Square::Yellow),
+    SquareFacet(Square::Red),
+    SquareFacet(Square::Orange),
+  ]
 }
 
 fn triangle_facets() -> Vec<TriangleFacet> {
