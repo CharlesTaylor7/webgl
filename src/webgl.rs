@@ -359,20 +359,23 @@ impl Twist {
 
 #[derive(Debug)]
 struct Piece {
-  indices: Vec<usize>,
-  normal: Vec3,
+  pub normal: Vec3,
+  pub facets: Vec<Facet>,
 }
-impl Piece {
-  fn new(normal: Vec3, indices: Vec<usize>) -> Piece {
-    Self { normal, indices }
+
+impl From<Facet> for Piece {
+  fn from(value: Facet) -> Self {
+    Self {
+      normal: value.normal,
+      facets: vec![value],
+    }
   }
 }
 
 #[allow(dead_code)]
 #[derive(Debug)]
 struct State {
-  facets: Vec<Facet>,
-  center_cut_pieces: Vec<Piece>,
+  pieces: Vec<Piece>,
   camera_transform: Mat4,
   camera_axis: Vec3,
   frame: f32,
@@ -384,23 +387,27 @@ impl State {
   fn new() -> Self {
     let mut camera_transform = mat4::create();
     mat4::identity(&mut camera_transform);
+    let pieces = Self::init_pieces();
     Self {
       camera_transform,
       camera_axis: vec3::create(),
       frame: 0.0,
       then: 0.0,
-      facets: Self::init_facets(),
       active_twist: None,
-      center_cut_pieces: vec![Piece::new([0., 0., 1.], vec![0, 11])],
+      pieces,
     }
   }
 
-  fn init_facets() -> Vec<Facet> {
+  fn facets(&self) -> impl Iterator<Item = &Facet> {
+    self.pieces.iter().flat_map(|p| p.facets.iter())
+  }
+
+  fn init_pieces() -> Vec<Piece> {
     // 8 hexagonal faces
     // each hexagon is split into 3 trapezoid facets and 1 center triangle
     // 6 square faces
     // 4 cross sections
-    let mut facets = Vec::with_capacity(4 * 8 + 6 + 4);
+    let mut pieces = Vec::with_capacity(6 + 8);
 
     // depth of a square from the center of the puzzle
     let a = 1.5;
@@ -494,62 +501,54 @@ impl State {
     let trapezoid8b = trapezoid6b.clone_with(&rot_y, Color::CORAL);
     let trapezoid8c = trapezoid6c.clone_with(&rot_y, Color::CORAL);
 
-    facets.push(square1);
-    facets.push(square2);
-    facets.push(square3);
-    facets.push(square4);
-    facets.push(square5);
-    facets.push(square6);
-    /*
-    facets.push(triangle1);
-    facets.push(triangle2);
-    facets.push(triangle3);
-    facets.push(triangle4);
-    facets.push(triangle5);
-    facets.push(triangle6);
-    facets.push(triangle7);
-    facets.push(triangle8);
+    pieces.push(Piece {
+      normal: square1.normal,
+      facets: vec![square1, trapezoid1a, trapezoid2c, trapezoid7a, trapezoid8c],
+    });
+    pieces.push(Piece {
+      normal: square2.normal,
+      facets: vec![square2, trapezoid2a, trapezoid7c, trapezoid3c, trapezoid5c],
+    });
+    pieces.push(Piece {
+      normal: square3.normal,
+      facets: vec![square3, trapezoid3a, trapezoid5b, trapezoid4c, trapezoid6b],
+    });
+    pieces.push(Piece {
+      normal: square4.normal,
+      facets: vec![square4, trapezoid4a, trapezoid6a, trapezoid1c, trapezoid8a],
+    });
+    pieces.push(Piece {
+      normal: square5.normal,
+      facets: vec![square5, trapezoid1b, trapezoid3b, trapezoid2b, trapezoid4b],
+    });
+    pieces.push(Piece {
+      normal: square6.normal,
+      facets: vec![square6, trapezoid5a, trapezoid6c, trapezoid7b, trapezoid8b],
+    });
 
-    facets.push(trapezoid1a);
-    facets.push(trapezoid1b);
-    facets.push(trapezoid1c);
-    facets.push(trapezoid2a);
-    facets.push(trapezoid2b);
-    facets.push(trapezoid2c);
-    facets.push(trapezoid3a);
-    facets.push(trapezoid3b);
-    facets.push(trapezoid3c);
-    facets.push(trapezoid4a);
-    facets.push(trapezoid4b);
-    facets.push(trapezoid4c);
-    facets.push(trapezoid5a);
-    facets.push(trapezoid5b);
-    facets.push(trapezoid5c);
-    facets.push(trapezoid6a);
-    facets.push(trapezoid6b);
-    facets.push(trapezoid6c);
-    facets.push(trapezoid7a);
-    facets.push(trapezoid7b);
-    facets.push(trapezoid7c);
-    facets.push(trapezoid8a);
-    facets.push(trapezoid8b);
-    facets.push(trapezoid8c);
-    */
-    facets
+    pieces.push(triangle1.into());
+    pieces.push(triangle2.into());
+    pieces.push(triangle3.into());
+    pieces.push(triangle4.into());
+    pieces.push(triangle5.into());
+    pieces.push(triangle6.into());
+    pieces.push(triangle7.into());
+    pieces.push(triangle8.into());
+    pieces
   }
 
   fn get_vertex_count(&self) -> u32 {
-    self.facets.iter().map(|f| f.get_vertex_count()).sum()
+    self.facets().map(|f| f.get_vertex_count()).sum()
   }
 
   fn get_index_count(&self) -> u32 {
-    self.facets.iter().map(|f| f.get_index_count()).sum()
+    self.facets().map(|f| f.get_index_count()).sum()
   }
 
   fn get_vertex_indices(&self) -> Uint32Array {
     let mut array = Vec::with_capacity(self.get_index_count() as usize);
     let mut total: u32 = 0;
-    for facet in self.facets.iter() {
+    for facet in self.facets() {
       let count = facet.get_vertex_count();
       for i in 0..(count - 2) {
         array.push(total);
@@ -565,7 +564,7 @@ impl State {
   fn get_vertex_colors(&self) -> Float32Array {
     // n vertices times 4 rgba values
     let mut array = Vec::with_capacity(4 * self.get_vertex_count() as usize);
-    for facet in self.facets.iter() {
+    for facet in self.facets() {
       for _ in 0..facet.get_vertex_count() {
         array.push(facet.color.0[0]);
         array.push(facet.color.0[1]);
@@ -588,9 +587,8 @@ impl State {
       && matches!(twist, Twist::Center { .. })
     {
       let normal = twist.to_normal();
-      for piece in self.center_cut_pieces.iter() {
-        for i in piece.indices.iter() {
-          let facet = self.facets[*i].borrow();
+      for piece in self.pieces.iter() {
+        for facet in piece.facets.iter() {
           let data: &mut [f32] = vector[offset..(offset + facet.mesh.len())].borrow_mut();
           data.copy_from_slice(&facet.mesh);
 
@@ -607,7 +605,7 @@ impl State {
     }
     // fast path
     else {
-      for facet in self.facets.iter() {
+      for facet in self.facets() {
         vector[offset..(offset + facet.mesh.len())].copy_from_slice(&facet.mesh);
         offset += facet.mesh.len();
       }
