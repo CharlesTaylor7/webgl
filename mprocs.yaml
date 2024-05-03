@@ -1,17 +1,14 @@
 procs:
   Wasm Pack:
-    cwd: wasm
     shell: watchexec -e rs -- wasm-pack build --debug --target web
 
   Dev Server:
     shell: npm run dev
 
   Docs:
-    cwd: wasm
     shell: cargo doc --open
     autostart: false
 
   Unit Tests:
-    cwd: wasm
     shell: cargo watch -x test
     autostart: false

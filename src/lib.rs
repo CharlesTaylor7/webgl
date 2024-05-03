@@ -5,6 +5,6 @@
   let_chains
 )]
 #![allow(incomplete_features)]
-mod permutation;
-mod puzzle;
-mod webgl;
+pub mod permutation;
+pub mod puzzle;
+pub mod webgl;
