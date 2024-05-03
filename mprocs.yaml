@@ -1,7 +1,7 @@
 procs:
   Wasm Pack:
     cwd: wasm
-    shell: watchexec -e rs -- wasm-pack build --target web
+    shell: watchexec -e rs -- wasm-pack build --debug --target web
 
   Dev Server:
     shell: npm run dev

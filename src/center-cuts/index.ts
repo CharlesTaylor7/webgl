@@ -13,6 +13,33 @@ import {
   setVertexIndices,
 } from "../utils";
 
+/*
+TODO:
+- [x] rotate camera with keyboard controls
+- [x] animate camera
+- [x] hold keys to rotate camera instead of buffered actions
+- [x] Tag pieces with their axis of rotation
+- [x] fix colors
+- [x] draw half the puzzle
+- [x] draw arrays in two passes
+- [x] animate
+- [x] rotate camera and puzzle at independent speeds
+- [x] Remove type safe builder pattern
+- [x] permute positons instead of colors
+- [x] filter pieces based on their type and normal axis
+- [x] rotate any octant
+- [x] Temporiality disable animation
+- [x] reimplement rotation animation
+- [ ] double check normals by deriving piece geometry from normals
+- [ ] reimplement action buffer
+- [ ] implement inverse rotations
+- [ ] Restore hexagonal cross sections for rotations
+- [ ] outlines or gaps between pieces
+- [ ] hot key to reset the camera to default orientation
+- [ ] lighting
+- [ ] less harsh background
+-
+*/
 type Facet = {
   color: ColorName;
   tag: FacetTag;
@@ -232,6 +259,7 @@ export function run(gl: WebGLRenderingContext): void {
     } else if (animatingAction === undefined && isActionKey(e.key)) {
       const action = actions[e.key];
       animatingAction = action;
+      sortPieces(action);
     }
   };
 
@@ -247,6 +275,26 @@ export function run(gl: WebGLRenderingContext): void {
       }
     }
   };
+
+  function sortPieces(action: Action) {
+    const sorted = [];
+    let i = 0;
+    let j = pieces.length / 2;
+    for (let piece of pieces) {
+      const dotProduct = vec3.dot(axisToVec(action), piece.normal);
+      if (dotProduct > 0) {
+        sorted[i++] = piece;
+      } else {
+        sorted[j++] = piece;
+      }
+    }
+    pieces = sorted;
+    const polygons = pieces.flatMap((p) => p.facets);
+    const indices = indexPattern(polygons);
+    setVertexIndices(gl, indices);
+    setVertexColors(gl, program, colorArray(polygons));
+    setVertexPositions(gl, program, polygonsToPositions(polygons));
+  }
 
   function rotatePieces(action: Action) {
     const rotate = rotations[action].rotatePoint;

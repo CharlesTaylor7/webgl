@@ -168,8 +168,9 @@ pub fn on_key_down(event: &KeyboardEvent) {
             }
           }
           Command::Twist { octant } => {
+            //state.active_twist = Twist { octant: *octant };
             if state.active_twist.is_none() {
-              state.active_twist = Some(Twist { octant: *octant });
+              state.active_twist = Twist { octant: *octant };
             }
           }
         }
@@ -228,6 +229,9 @@ const FRAGMENT_SHADER: &str = r##"
 
 #[wasm_bindgen(start)]
 fn start() -> Result<()> {
+  use console_error_panic_hook;
+  std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+
   let gl = webgl_context()?;
   // enable u32 type
   gl.get_extension("OES_element_index_uint")?;
@@ -330,6 +334,11 @@ struct Twist {
   octant: u8,
 }
 impl Twist {
+  const NONE: Twist = Twist { octant: 8 };
+  fn is_none(&self) -> bool {
+    self.octant > 7
+  }
+
   fn to_normal(&self) -> Vec3 {
     let mut axis = [-1., -1., -1.];
     if self.octant & 1 != 0 {
@@ -361,7 +370,7 @@ struct State {
   camera_axis: Vec3,
   frame: f32,
   then: f32,
-  active_twist: Option<Twist>,
+  active_twist: Twist,
 }
 
 impl State {
@@ -374,7 +383,7 @@ impl State {
       frame: 0.0,
       then: 0.0,
       facets: Self::init_facets(),
-      active_twist: None,
+      active_twist: Twist::NONE,
     }
   }
 
@@ -562,17 +571,18 @@ impl State {
 
   fn get_vertex_positions(&self) -> Float32Array {
     let mut vector = vec![0.0; self.get_vertex_count() as usize * 3];
-    console_log("here 1");
     let mut offset = 0;
-    console_log("here 2");
 
+    // fast path
+    if self.active_twist.is_none() {
+      for facet in self.facets.iter() {
+        vector[offset..(offset + facet.mesh.len())].copy_from_slice(&facet.mesh);
+        offset += facet.mesh.len();
+      }
+    }
     // slow path
-    STATE.with_borrow(|state| console_log(state.active_twist.as_slice()));
-    if let Some(twist) = STATE.with_borrow(|state| state.active_twist) {
-      console_log("here 3");
-      let normal = twist.to_normal();
-      //  vec3::dot(normal, )
-
+    else {
+      let normal = self.active_twist.to_normal();
       for facet in self.facets.iter() {
         let data: &mut [f32] = vector[offset..(offset + facet.mesh.len())].borrow_mut();
         data.copy_from_slice(&facet.mesh);
@@ -580,19 +590,10 @@ impl State {
         if vec3::dot(&normal, &facet.normal) > 0. {
           console_log(true);
           let mut mesh = Mesh { data };
-          mesh.transform(&twist.to_matrix(PI / 6.));
+          mesh.transform(&self.active_twist.to_matrix(PI / 6.));
         } else {
           console_log(false);
         }
-        offset += facet.mesh.len();
-      }
-    }
-    // fast path
-    else {
-      console_log("here 4");
-      for facet in self.facets.iter() {
-        vector[offset..(offset + facet.mesh.len())].copy_from_slice(&facet.mesh);
-        console_log("here 5");
         offset += facet.mesh.len();
       }
     }
