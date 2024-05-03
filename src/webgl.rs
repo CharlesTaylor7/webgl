@@ -1,6 +1,6 @@
 use gl_matrix::common::{Mat4, Vec3, PI};
 use gl_matrix::{mat4, vec3};
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
@@ -97,7 +97,7 @@ impl Command {
 const ANIMATION_DURATION: f32 = 400.0;
 
 // it takes 1.6 seconds to rotate the camera 120 degrees
-const CAMERA_SPEED: f32 = (2.0 * PI) / (3.0 * 1600.0);
+const CAMERA_SPEED: f32 = (2.0 * std::f32::consts::PI) / (3.0 * 1600.0);
 
 #[wasm_bindgen]
 pub fn render(ms: f32) -> Result<()> {
@@ -388,7 +388,6 @@ impl Piece {
   }
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct State {
   pieces: Vec<Piece>,
@@ -595,10 +594,10 @@ impl State {
     let mut array = Vec::with_capacity(4 * self.get_vertex_count() as usize);
     for facet in self.facets() {
       for _ in 0..facet.get_vertex_count() {
-        array.push(facet.color.0[0]);
-        array.push(facet.color.0[1]);
-        array.push(facet.color.0[2]);
-        array.push(facet.color.0[3]);
+        array.push(facet.color.red());
+        array.push(facet.color.green());
+        array.push(facet.color.blue());
+        array.push(facet.color.alpha());
       }
     }
 
@@ -612,9 +611,7 @@ impl State {
     let mut offset = 0;
 
     // slow path
-    if let Some(twist) = self.active_twist
-      && matches!(twist, Twist::Center { .. })
-    {
+    if let Some(twist) = self.active_twist {
       let normal = twist.to_normal();
       for piece in self.pieces.iter() {
         for facet in piece.facets.iter() {
@@ -685,24 +682,45 @@ impl Facet {
 }
 
 #[derive(Debug, Clone)]
-struct Color([f32; 4]);
+struct Color {
+  red: u8,
+  green: u8,
+  blue: u8,
+  alpha: f32,
+}
 
-#[allow(dead_code)]
 impl Color {
   const fn rgb(red: u8, green: u8, blue: u8) -> Self {
-    Color([
-      red as f32 / 255.0,
-      green as f32 / 255.0,
-      blue as f32 / 255.0,
-      1.0,
-    ])
+    Color {
+      red,
+      green,
+      blue,
+      alpha: 1.,
+    }
+  }
+  const fn rgba(red: u8, green: u8, blue: u8, alpha: f32) -> Self {
+    Color {
+      red,
+      green,
+      blue,
+      alpha,
+    }
   }
 
-  fn write_to(&self, array: &Float32Array, start: u32) {
-    Float32Array::set_index(array, start, self.0[0]);
-    Float32Array::set_index(array, start + 1, self.0[1]);
-    Float32Array::set_index(array, start + 2, self.0[2]);
-    Float32Array::set_index(array, start + 3, self.0[3]);
+  fn red(&self) -> f32 {
+    f32::from(self.red) / 255.
+  }
+
+  fn green(&self) -> f32 {
+    f32::from(self.green) / 255.
+  }
+
+  fn blue(&self) -> f32 {
+    f32::from(self.blue) / 255.
+  }
+
+  fn alpha(&self) -> f32 {
+    self.alpha
   }
 
   const MAGENTA: Self = Self::rgb(210, 75, 208);
