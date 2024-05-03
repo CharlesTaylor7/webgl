@@ -392,11 +392,11 @@ impl Piece {
 
 #[derive(Debug)]
 struct State {
-  pieces: Vec<Piece>,
   camera_transform: Mat4,
   camera_axis: Vec3,
   frame: f32,
   then: f32,
+  pieces: Vec<Piece>,
   active_twist: Option<Twist>,
 }
 
@@ -625,8 +625,6 @@ impl State {
             let mut mesh = Mesh { data };
             let angle = ((2. * PI) / 3.) * (self.frame / ANIMATION_DURATION);
             mesh.transform(&twist.to_matrix(angle));
-          } else {
-            console_log(false);
           }
           offset += facet.mesh.len();
         }
