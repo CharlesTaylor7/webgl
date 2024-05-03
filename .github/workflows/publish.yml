@@ -26,11 +26,9 @@ jobs:
           toolchain: nightly
           targets: wasm32-unknown-unknown
 
-      - name: Build Rust
-        run: cargo build
-
-      - name: Build JS
+      - name: Build
         run: |
+          cargo build
           npm i 
           npx vite build
   
