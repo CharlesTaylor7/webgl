@@ -11,6 +11,8 @@
   <style>
     html,
     body {
+      margin: 0;
+      body: 0;
       height: 100%;
     }
     /* make the canvas fill its container */
@@ -21,12 +23,6 @@
     }
   </style>
 
-  <script type="module">
-    import init, { greet } from "./wasm/pkg/look_how_they_truncated_my_boy.js";
-    init().then(() => {
-      greet("WebAssembly");
-    });
-  </script>
   <body class="flex items-center justify-center">
     <canvas class="block" id="webgl-root"></canvas>
     <script type="module" src="/src/main.ts"></script>
