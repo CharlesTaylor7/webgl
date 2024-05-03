@@ -11,25 +11,25 @@ The left hand controls the camera, and the right hand twists the puzzle.
 
 The camera uses WASD controls:
 
-`w`: tilt up
-`s`: tilt down 
-`a`: tilt left
-`d`: tilt right
-`q`: rotate left
-`e`: rotate right
+`w`: tilt up <br>
+`s`: tilt down <br>
+`a`: tilt left <br>
+`d`: tilt right <br>
+`q`: rotate left <br>
+`e`: rotate right <br>
 
 Twisting the puzzle is done via HJKL:
 There are 4 axes of rotation possible.
-`h`: Twist about the first octant 120 degrees
-`j`: Twist about the second octant 120 degrees
-`k`: Twist about the third octant 120 degrees
-`l`: Twist about the fourth octant 120 degrees
+`h`: Twist about the first octant 120 degrees <br>
+`j`: Twist about the second octant 120 degrees <br>
+`k`: Twist about the third octant 120 degrees <br>
+`l`: Twist about the fourth octant 120 degrees <br>
 
 Inverse twists are provided for convenience. These are located directly above the previous key row
-`y`: Inverse of h
-`u`: Inverse of j
-`i`: Inverse of k
-`o`: Inverse of l
+`y`: Inverse of h <br>
+`u`: Inverse of j <br>
+`i`: Inverse of k <br>
+`o`: Inverse of l <br>
 
 
 ## Future Ideas
