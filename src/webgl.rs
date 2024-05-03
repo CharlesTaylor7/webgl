@@ -106,6 +106,10 @@ pub fn render(ms: f32) -> Result<()> {
   STATE.with_borrow_mut(|p| {
     let delta = ms - p.then;
     p.then = ms;
+    p.frame += delta;
+    if p.frame > ANIMATION_DURATION {
+      p.complete_twist();
+    }
 
     if p.camera_axis.iter().any(|c| *c != 0.0) {
       let mut transform = mat4::create();
@@ -398,6 +402,21 @@ impl State {
     }
   }
 
+  fn complete_twist(&mut self) {
+    self.frame = 0.;
+    if let Some(twist) = self.active_twist.take() {
+      let normal = twist.to_normal();
+      let twist = twist.to_matrix(2. * PI / 3.);
+      for piece in self.pieces.iter_mut() {
+        for facet in piece.facets.iter_mut() {
+          if vec3::dot(&normal, &piece.normal) > 0. {
+            facet.transform(&twist);
+          }
+        }
+      }
+    }
+  }
+
   fn facets(&self) -> impl Iterator<Item = &Facet> {
     self.pieces.iter().flat_map(|p| p.facets.iter())
   }
@@ -595,7 +614,8 @@ impl State {
           if vec3::dot(&normal, &piece.normal) > 0. {
             console_log(true);
             let mut mesh = Mesh { data };
-            mesh.transform(&twist.to_matrix(PI / 6.));
+            let angle = ((2. * PI) / 3.) * (self.frame / ANIMATION_DURATION);
+            mesh.transform(&twist.to_matrix(angle));
           } else {
             console_log(false);
           }
