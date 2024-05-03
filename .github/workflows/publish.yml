@@ -23,12 +23,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Build Rust
-        run:
+        run: |
           - cd wasm
           - cargo build
 
       - name: Build JS
-        run: 
+        run: |
           - npm i 
           - npx vite build
   
