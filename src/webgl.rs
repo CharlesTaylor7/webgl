@@ -70,7 +70,7 @@ enum Command {
     // bit pattern.
     // first bit is the x axis,
     // second bit is the y axis,
-    // third bit is the z axis
+    // third bit is orientation
     octant: u8,
   },
 }
@@ -128,8 +128,9 @@ pub fn render(ms: f32) -> Result<()> {
     }
 
     set_vertex_positions(&gl, &p.get_vertex_positions());
-    set_vertex_colors(&gl, &p.get_vertex_colors());
-    set_vertex_indices(&gl, &p.get_vertex_indices());
+
+    //set_vertex_colors(&gl, &p.get_vertex_colors());
+    //set_vertex_indices(&gl, &p.get_vertex_indices());
 
     clear_scene(&gl);
     resize_to_screen(&gl);
@@ -334,14 +335,18 @@ fn webgl_context() -> Result<WebGlRenderingContext> {
 #[derive(Clone, Copy, Debug)]
 enum Twist {
   Center { octant: u8 },
-  Side { hexagon: () /* todo */ },
 }
 impl Twist {
+  fn positive(&self) -> bool {
+    let Twist::Center { octant } = self;
+    octant & 4 > 0
+  }
+
   fn to_normal(&self) -> Vec3 {
     match self {
-      Twist::Side { .. } => todo!(),
+      //Twist::Side { .. } => todo!(),
       Twist::Center { octant } => {
-        let mut axis = [-1., -1., -1.];
+        let mut axis = [-1., -1., 1.];
         if octant & 1 != 0 {
           axis[0] = 1.;
         }
@@ -350,9 +355,6 @@ impl Twist {
           axis[1] = 1.;
         }
 
-        if octant & 4 != 0 {
-          axis[2] = 1.;
-        }
         axis
       }
     }
@@ -416,16 +418,17 @@ impl State {
   }
 
   fn complete_twist(&mut self) {
-    self.frame = 0.;
-    if let Some(twist) = self.active_twist.take() {
+    if let Some(twist) = self.active_twist {
       let normal = twist.to_normal();
-      let twist = twist.to_matrix(2. * PI / 3.);
+      let twist = twist.to_matrix(self.twist_angle());
       for piece in self.pieces.iter_mut() {
         if vec3::dot(&normal, &piece.normal) > 0. {
           piece.transform(&twist)
         }
       }
     }
+    self.frame = 0.;
+    self.active_twist = None;
   }
 
   fn facets(&self) -> impl Iterator<Item = &Facet> {
@@ -608,6 +611,16 @@ impl State {
     array
   }
 
+  fn twist_angle(&self) -> f32 {
+    let mut angle = ((2. * PI) / 3.) * f32::min(1., self.frame / ANIMATION_DURATION);
+    if let Some(twist) = self.active_twist {
+      if !twist.positive() {
+        angle *= -1.;
+      }
+    }
+    angle
+  }
+
   fn get_vertex_positions(&self) -> Float32Array {
     let mut vector = vec![0.0; self.get_vertex_count() as usize * 3];
     let mut offset = 0;
@@ -621,10 +634,8 @@ impl State {
           data.copy_from_slice(&facet.mesh);
 
           if vec3::dot(&normal, &piece.normal) > 0. {
-            console_log(true);
             let mut mesh = Mesh { data };
-            let angle = ((2. * PI) / 3.) * (self.frame / ANIMATION_DURATION);
-            mesh.transform(&twist.to_matrix(angle));
+            mesh.transform(&twist.to_matrix(self.twist_angle()));
           }
           offset += facet.mesh.len();
         }
