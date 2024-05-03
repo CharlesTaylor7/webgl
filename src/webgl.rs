@@ -229,8 +229,10 @@ const FRAGMENT_SHADER: &str = r##"
 
 #[wasm_bindgen(start)]
 fn start() -> Result<()> {
-  use console_error_panic_hook;
-  std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+  if cfg!(debug_assertions) {
+    use console_error_panic_hook;
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+  }
 
   let gl = webgl_context()?;
   // enable u32 type
