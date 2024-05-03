@@ -33,7 +33,6 @@ Inverse twists are provided for convenience. These are located directly above th
 
 
 ## Future Ideas
-- [ ] Use an action Buffer 
 - [ ] Use hexagonal cross sections for rotations
 - [ ] outlines or gaps between pieces
 - [ ] hot key to reset the camera to default orientation

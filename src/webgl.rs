@@ -2,7 +2,7 @@ use gl_matrix::common::{Mat4, Vec3, PI};
 use gl_matrix::{mat4, vec3};
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys::{Float32Array, Uint32Array};
 use web_sys::{
@@ -106,7 +106,7 @@ pub fn render(ms: f32) -> Result<()> {
   STATE.with_borrow_mut(|p| {
     let delta = ms - p.then;
     p.then = ms;
-    if p.active_twist.is_some() {
+    if p.twist_buffer.len() > 0 {
       p.frame += delta;
       console_log(delta);
       if p.frame > ANIMATION_DURATION {
@@ -172,9 +172,9 @@ pub fn on_key_down(event: &KeyboardEvent) {
             }
           }
           Command::Twist { octant } => {
-            if state.active_twist.is_none() {
-              state.active_twist = Some(Twist::Center { octant: *octant });
-            }
+            state
+              .twist_buffer
+              .push_back(Twist::Center { octant: *octant });
           }
         }
       }
@@ -360,7 +360,12 @@ impl Twist {
     }
   }
 
-  fn to_matrix(&self, angle: f32) -> Mat4 {
+  fn to_matrix(&self, frame: f32) -> Mat4 {
+    let mut angle = ((2. * PI) / 3.) * f32::min(1., frame / ANIMATION_DURATION);
+    if !self.positive() {
+      angle *= -1.;
+    }
+
     let mut matrix = mat4::create();
     mat4::from_rotation(&mut matrix, angle, &self.to_normal());
     matrix
@@ -399,7 +404,7 @@ struct State {
   frame: f32,
   then: f32,
   pieces: Vec<Piece>,
-  active_twist: Option<Twist>,
+  twist_buffer: VecDeque<Twist>,
 }
 
 impl State {
@@ -412,15 +417,15 @@ impl State {
       camera_axis: vec3::create(),
       frame: 0.0,
       then: 0.0,
-      active_twist: None,
+      twist_buffer: VecDeque::new(),
       pieces,
     }
   }
 
   fn complete_twist(&mut self) {
-    if let Some(twist) = self.active_twist {
+    if let Some(twist) = self.twist_buffer.pop_front() {
       let normal = twist.to_normal();
-      let twist = twist.to_matrix(self.twist_angle());
+      let twist = twist.to_matrix(self.frame);
       for piece in self.pieces.iter_mut() {
         if vec3::dot(&normal, &piece.normal) > 0. {
           piece.transform(&twist)
@@ -428,7 +433,6 @@ impl State {
       }
     }
     self.frame = 0.;
-    self.active_twist = None;
   }
 
   fn facets(&self) -> impl Iterator<Item = &Facet> {
@@ -611,22 +615,12 @@ impl State {
     array
   }
 
-  fn twist_angle(&self) -> f32 {
-    let mut angle = ((2. * PI) / 3.) * f32::min(1., self.frame / ANIMATION_DURATION);
-    if let Some(twist) = self.active_twist {
-      if !twist.positive() {
-        angle *= -1.;
-      }
-    }
-    angle
-  }
-
   fn get_vertex_positions(&self) -> Float32Array {
     let mut vector = vec![0.0; self.get_vertex_count() as usize * 3];
     let mut offset = 0;
 
     // slow path
-    if let Some(twist) = self.active_twist {
+    if let Some(twist) = self.twist_buffer.front() {
       let normal = twist.to_normal();
       for piece in self.pieces.iter() {
         for facet in piece.facets.iter() {
@@ -635,7 +629,7 @@ impl State {
 
           if vec3::dot(&normal, &piece.normal) > 0. {
             let mut mesh = Mesh { data };
-            mesh.transform(&twist.to_matrix(self.twist_angle()));
+            mesh.transform(&twist.to_matrix(self.frame));
           }
           offset += facet.mesh.len();
         }
