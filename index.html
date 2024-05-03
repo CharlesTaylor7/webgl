@@ -7,14 +7,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script type="module">
       import init, { render, on_key_down, on_key_up } from "/pkg/look_how_they_truncated_my_boy.js";
-      await init();
-      function loop(ms) {
-        render(ms);
+      async function main() {
+        await init();
+        function loop(ms) {
+          render(ms);
+          requestAnimationFrame(loop);
+        }
+        document.addEventListener("keydown", on_key_down);
+        document.addEventListener("keyup", on_key_up);
         requestAnimationFrame(loop);
       }
-      document.addEventListener("keydown", on_key_down);
-      document.addEventListener("keyup", on_key_up);
-      requestAnimationFrame(loop);
+      main()
     </script>
     <style>
       html,
