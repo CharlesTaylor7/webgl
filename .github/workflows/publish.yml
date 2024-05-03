@@ -22,10 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          targets: wasm32-unknown-unknown
+
       - name: Build Rust
-        run: |
-          cd wasm
-          cargo build
+        run: cargo build
 
       - name: Build JS
         run: |
