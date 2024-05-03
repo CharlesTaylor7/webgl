@@ -24,13 +24,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build Rust
         run: |
-          - cd wasm
-          - cargo build
+          cd wasm
+          cargo build
 
       - name: Build JS
         run: |
-          - npm i 
-          - npx vite build
+          npm i 
+          npx vite build
   
       - name: Setup Pages
         uses: actions/configure-pages@v3
