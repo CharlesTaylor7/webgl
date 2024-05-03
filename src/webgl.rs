@@ -106,9 +106,12 @@ pub fn render(ms: f32) -> Result<()> {
   STATE.with_borrow_mut(|p| {
     let delta = ms - p.then;
     p.then = ms;
-    p.frame += delta;
-    if p.frame > ANIMATION_DURATION {
-      p.complete_twist();
+    if p.active_twist.is_some() {
+      p.frame += delta;
+      console_log(delta);
+      if p.frame > ANIMATION_DURATION {
+        p.complete_twist();
+      }
     }
 
     if p.camera_axis.iter().any(|c| *c != 0.0) {
@@ -125,10 +128,9 @@ pub fn render(ms: f32) -> Result<()> {
     }
 
     set_vertex_positions(&gl, &p.get_vertex_positions());
-    /*
     set_vertex_colors(&gl, &p.get_vertex_colors());
     set_vertex_indices(&gl, &p.get_vertex_indices());
-    */
+
     clear_scene(&gl);
     resize_to_screen(&gl);
     let n = p.get_index_count() as i32;
