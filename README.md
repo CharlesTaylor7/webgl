@@ -1,16 +1,19 @@
-# webgl
+# Dayan Gem Sim
+![demo](https://github.com/CharlesTaylor7/webgl/assets/16541866/a64b0427-c640-48b2-b346-6e4283928d13)
 
-Simulation of an exotic twisty puzzle. The shape is a truncated octahedron with center cuts. It allows turning on 4 different axes at 120 degree angles. 
-The shape has a total of 14 sides, 8 hexagonal, and 6 square. 
 
-It is a simpler version of the [Dayan gem IV](https://twistypuzzles.com/cgi-bin/puzzle.cgi?pkey=2811) which includes 3 cuts per axis, which allows the hexgaonal faces to turn. 
+
+
+This a webGL browser based simulation of a simplified [Dayan Gem IV]((https://twistypuzzles.com/cgi-bin/puzzle.cgi?pkey=2811)). 
+The puzzle is a [truncated octahedron](https://en.wikipedia.org/wiki/Truncated_octahedron) with center cuts. It allows turning on 4 different axes at 120 degree angles.
+
+[Try it yourself!](charlestaylor7.github.io/webgl)
 
 ## Hot Keys
 The hotkeys are designed around the QWERTY keyboard layout. 
 The left hand controls the camera, and the right hand twists the puzzle.
 
-The camera uses WASD controls:
-
+The camera uses WASD controls:<br>
 `w`: tilt up <br>
 `s`: tilt down <br>
 `a`: tilt left <br>
@@ -18,18 +21,18 @@ The camera uses WASD controls:
 `q`: rotate left <br>
 `e`: rotate right <br>
 
-Twisting the puzzle is done via HJKL:
-There are 4 axes of rotation possible.
+Twisting the puzzle is done via HJKL:<br>
 `h`: Twist about the first octant 120 degrees <br>
 `j`: Twist about the second octant 120 degrees <br>
 `k`: Twist about the third octant 120 degrees <br>
 `l`: Twist about the fourth octant 120 degrees <br>
 
-Inverse twists are provided for convenience. These are located directly above the previous key row
+Inverse twists are provided for convenience. These are located directly above the previous key row:<br>
 `y`: Inverse of h <br>
 `u`: Inverse of j <br>
 `i`: Inverse of k <br>
 `o`: Inverse of l <br>
+
 
 
 ## Future Ideas
