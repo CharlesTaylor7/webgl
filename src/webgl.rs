@@ -108,7 +108,6 @@ pub fn render(ms: f32) -> Result<()> {
     p.then = ms;
     if p.twist_buffer.len() > 0 {
       p.frame += delta;
-      console_log(delta);
       if p.frame > ANIMATION_DURATION {
         p.complete_twist();
       }
@@ -184,7 +183,6 @@ pub fn on_key_down(event: &KeyboardEvent) {
 
 #[wasm_bindgen]
 pub fn on_key_up(event: &KeyboardEvent) {
-  console::log_2(&JsValue::from("keyup"), &JsValue::from(event));
   KEYMAP.with(|keymap| {
     STATE.with_borrow_mut(|state| {
       let key: String = event.key();
@@ -594,8 +592,7 @@ impl State {
       }
       total += count;
     }
-    let array = Uint32Array::from(array.as_slice());
-    array
+    Uint32Array::from(array.as_slice())
   }
 
   fn get_vertex_colors(&self) -> Float32Array {
@@ -610,9 +607,7 @@ impl State {
       }
     }
 
-    let array = Float32Array::from(array.as_slice());
-    console::log_2(&JsValue::from("colors"), &JsValue::from(&array));
-    array
+    Float32Array::from(array.as_slice())
   }
 
   fn get_vertex_positions(&self) -> Float32Array {
@@ -643,9 +638,7 @@ impl State {
       }
     }
 
-    let array = Float32Array::from(vector.as_slice());
-    console::log_2(&JsValue::from("positions"), &JsValue::from(&array));
-    array
+    Float32Array::from(vector.as_slice())
   }
 }
 
