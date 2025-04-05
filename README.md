@@ -7,7 +7,7 @@
 This a webGL browser based simulation of a simplified [Dayan Gem IV]((https://twistypuzzles.com/cgi-bin/puzzle.cgi?pkey=2811)). 
 The puzzle is a [truncated octahedron](https://en.wikipedia.org/wiki/Truncated_octahedron) with center cuts. It allows turning on 4 different axes at 120 degree angles.
 
-[Try it yourself!](charlestaylor7.github.io/webgl)
+[Try it yourself!](https://charlestaylor7.github.io/webgl)
 
 ## Hot Keys
 The hotkeys are designed around the QWERTY keyboard layout. 
